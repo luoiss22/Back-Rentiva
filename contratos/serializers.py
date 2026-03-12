@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from .models import Contrato, HistorialContrato
 
 
@@ -22,6 +23,32 @@ class ContratoSerializer(serializers.ModelSerializer):
         model = Contrato
         fields = "__all__"
         read_only_fields = ("created_at", "updated_at")
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        is_admin = getattr(user, "rol", None) == "admin"
+
+        # Validar que la propiedad pertenece al usuario
+        propiedad = attrs.get("propiedad", getattr(self.instance, "propiedad", None))
+        if propiedad and not is_admin and propiedad.propietario_id != user.pk:
+            raise serializers.ValidationError(
+                {"propiedad": "No puedes crear contratos en propiedades ajenas."}
+            )
+
+        # Validar que el arrendatario pertenece al usuario
+        arrendatario = attrs.get("arrendatario", getattr(self.instance, "arrendatario", None))
+        if arrendatario and not is_admin and arrendatario.propietario_id != user.pk:
+            raise serializers.ValidationError(
+                {"arrendatario": "No puedes usar arrendatarios ajenos."}
+            )
+
+        # Ejecutar validaciones del modelo
+        instance = Contrato(**attrs)
+        if self.instance:
+            instance.pk = self.instance.pk
+        instance.clean()
+        return attrs
 
 
 class ContratoListSerializer(serializers.ModelSerializer):

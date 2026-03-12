@@ -4,12 +4,14 @@ from .views import (
     PropiedadDetalleViewSet,
     MobiliarioViewSet,
     PropiedadMobiliarioViewSet,
+    FotoPropiedadViewSet,
 )
 
 router = DefaultRouter()
-router.register(r"propiedades", PropiedadViewSet)
-router.register(r"propiedad-detalles", PropiedadDetalleViewSet)
+router.register(r"propiedades", PropiedadViewSet, basename="propiedad")
+router.register(r"propiedad-detalles", PropiedadDetalleViewSet, basename="propiedad-detalle")
 router.register(r"mobiliario", MobiliarioViewSet)
-router.register(r"propiedad-mobiliario", PropiedadMobiliarioViewSet)
+router.register(r"propiedad-mobiliario", PropiedadMobiliarioViewSet, basename="propiedad-mobiliario")
+router.register(r"fotos-propiedad", FotoPropiedadViewSet, basename="foto-propiedad")
 
 urlpatterns = router.urls

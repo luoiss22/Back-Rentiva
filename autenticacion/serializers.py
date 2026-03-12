@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from .models import Propietario, Credencial
 
@@ -6,7 +7,7 @@ class PropietarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Propietario
         fields = "__all__"
-        read_only_fields = ("created_at", "updated_at")
+        read_only_fields = ("created_at", "updated_at", "rol")
 
 
 class PropietarioListSerializer(serializers.ModelSerializer):
@@ -17,34 +18,86 @@ class PropietarioListSerializer(serializers.ModelSerializer):
         fields = ("id", "nombre", "apellidos", "email", "telefono", "estado")
 
 
-class CredencialSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True)
+# ── Auth serializers ───────────────────────────────────────────────
 
-    class Meta:
-        model = Credencial
-        fields = (
-            "id", "propietario", "email", "password",
-            "ultimo_acceso", "intentos_fallidos", "bloqueado",
-            "created_at", "updated_at",
-        )
-        read_only_fields = (
-            "contrasena_hash", "ultimo_acceso",
-            "intentos_fallidos", "bloqueado",
-            "created_at", "updated_at",
-        )
+class RegistroSerializer(serializers.Serializer):
+    """Registro: crea Propietario + Credencial en una transacción."""
+
+    nombre = serializers.CharField(max_length=120)
+    apellidos = serializers.CharField(max_length=120)
+    email = serializers.EmailField()
+    telefono = serializers.CharField(max_length=20, required=False, default="")
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_email(self, value):
+        if Propietario.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Ya existe una cuenta con este correo.")
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        credencial = Credencial(**validated_data)
-        credencial.set_password(password)
-        credencial.save()
-        return credencial
+        with transaction.atomic():
+            propietario = Propietario.objects.create(
+                rol=Propietario.Rol.PROPIETARIO,  # Siempre propietario
+                **validated_data,
+            )
+            credencial = Credencial(
+                propietario=propietario,
+                email=propietario.email,
+            )
+            credencial.set_password(password)
+            credencial.save()
+        return propietario
 
-    def update(self, instance, validated_data):
-        password = validated_data.pop("password", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        if password:
-            instance.set_password(password)
-        instance.save()
-        return instance
+
+class LoginSerializer(serializers.Serializer):
+    """Valida credenciales y devuelve el propietario."""
+
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    MAX_INTENTOS = 5
+
+    def validate(self, attrs):
+        email = attrs["email"]
+        password = attrs["password"]
+
+        try:
+            credencial = Credencial.objects.select_related("propietario").get(email=email)
+        except Credencial.DoesNotExist:
+            raise serializers.ValidationError({"email": "Credenciales inválidas."})
+
+        if credencial.bloqueado:
+            raise serializers.ValidationError(
+                {"email": "Cuenta bloqueada por demasiados intentos fallidos. Contacta soporte."}
+            )
+
+        if not credencial.check_password(password):
+            credencial.intentos_fallidos += 1
+            if credencial.intentos_fallidos >= self.MAX_INTENTOS:
+                credencial.bloqueado = True
+            credencial.save(update_fields=["intentos_fallidos", "bloqueado"])
+            raise serializers.ValidationError({"password": "Credenciales inválidas."})
+
+        # Reset intentos en login exitoso
+        from django.utils import timezone
+        credencial.intentos_fallidos = 0
+        credencial.ultimo_acceso = timezone.now()
+        credencial.save(update_fields=["intentos_fallidos", "ultimo_acceso"])
+
+        attrs["propietario"] = credencial.propietario
+        return attrs
+
+
+class CambioPasswordSerializer(serializers.Serializer):
+    """Cambio de contraseña autenticado."""
+
+    password_actual = serializers.CharField(write_only=True)
+    password_nuevo = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_password_actual(self, value):
+        propietario = self.context["request"].propietario
+        credencial = propietario.credencial
+        if not credencial.check_password(value):
+            raise serializers.ValidationError("La contraseña actual es incorrecta.")
+        return value

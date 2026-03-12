@@ -20,6 +20,7 @@ class Propietario(models.Model):
     telefono = models.CharField(max_length=20, blank=True)
     email = models.EmailField(unique=True)
     folio_ine = models.CharField(max_length=20, blank=True)
+    foto = models.ImageField(upload_to="propietarios/fotos/", blank=True, null=True)
     rol = models.CharField(max_length=20, choices=Rol.choices, default=Rol.PROPIETARIO)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.ACTIVO)
     created_at = models.DateTimeField(auto_now_add=True)

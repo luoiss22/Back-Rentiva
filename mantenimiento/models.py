@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
 
@@ -108,6 +109,7 @@ class ResenaEspecialista(models.Model):
     )
     calificacion = models.PositiveSmallIntegerField(
         help_text="Calificación de 1 a 5",
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
     comentario = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

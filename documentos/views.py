@@ -1,10 +1,49 @@
 from rest_framework import viewsets
+
+from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Documento
-from .serializers import DocumentoSerializer
+from .serializers import DocumentoSerializer, DocumentoListSerializer
 
 
 class DocumentoViewSet(viewsets.ModelViewSet):
-    queryset = Documento.objects.all()
-    serializer_class = DocumentoSerializer
+    """
+    Admin: ve todos los documentos.
+    Propietario: solo ve documentos vinculados a sus entidades.
+    """
+    permission_classes = [IsOwnerOrAdmin]
     filterset_fields = ("tipo_entidad", "entidad_id", "tipo_documento")
     search_fields = ("nombre_archivo", "descripcion")
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return DocumentoListSerializer
+        return DocumentoSerializer
+
+    def get_queryset(self):
+        qs = Documento.objects.all()
+        user = self.request.user
+        if getattr(user, "rol", None) == "admin":
+            return qs
+        # Filtra documentos cuyo tipo_entidad=propietario y entidad_id=user.pk
+        # más los vinculados a propiedades, contratos, etc. del propietario
+        from django.db.models import Q
+        from propiedades.models import Propiedad
+        from contratos.models import Contrato
+        from arrendatarios.models import Arrendatario
+
+        propiedad_ids = Propiedad.objects.filter(
+            propietario=user,
+        ).values_list("id", flat=True)
+        contrato_ids = Contrato.objects.filter(
+            propiedad__propietario=user,
+        ).values_list("id", flat=True)
+        arrendatario_ids = Arrendatario.objects.filter(
+            propietario=user,
+        ).values_list("id", flat=True)
+
+        return qs.filter(
+            Q(tipo_entidad="propietario", entidad_id=user.pk)
+            | Q(tipo_entidad="propiedad", entidad_id__in=propiedad_ids)
+            | Q(tipo_entidad="contrato", entidad_id__in=contrato_ids)
+            | Q(tipo_entidad="arrendatario", entidad_id__in=arrendatario_ids)
+        )

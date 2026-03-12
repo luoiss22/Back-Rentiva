@@ -8,12 +8,21 @@ class Arrendatario(models.Model):
         ACTIVO = "activo", "Activo"
         INACTIVO = "inactivo", "Inactivo"
 
+    propietario = models.ForeignKey(
+        "autenticacion.Propietario",
+        on_delete=models.CASCADE,
+        related_name="arrendatarios",
+        null=True,
+        blank=True,
+        help_text="Propietario que registró a este arrendatario",
+    )
     nombre = models.CharField(max_length=120)
     apellidos = models.CharField(max_length=120)
     telefono = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
     folio_ine = models.CharField(max_length=20, blank=True)
+    foto = models.ImageField(upload_to="arrendatarios/fotos/", blank=True, null=True)
     mascotas = models.BooleanField(default=False)
     hijos = models.BooleanField(default=False)
     estado = models.CharField(

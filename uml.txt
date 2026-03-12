@@ -1,0 +1,352 @@
+@startuml Rentiva_Backend_UML
+
+' ============================================================
+' RENTIVA BACKEND — Diagrama de clases (PlantUML)
+' Generado el 2026-03-04
+' ============================================================
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: autenticacion
+' ────────────────────────────────────────────────────────────
+package "autenticacion" {
+
+  class Propietario {
+    + id : int (PK)
+    --
+    + nombre : CharField(120)
+    + apellidos : CharField(120)
+    + fecha_nacimiento : DateField [null]
+    + telefono : CharField(20)
+    + email : EmailField (unique)
+    + folio_ine : CharField(20)
+    + foto : ImageField [null]
+    + rol : CharField  {admin | propietario}
+    + estado : CharField  {activo | inactivo | suspendido}
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  class Credencial {
+    + id : int (PK)
+    --
+    + email : EmailField (unique)
+    + contrasena_hash : CharField(255)
+    + token_recuperacion : CharField(255) [null]
+    + ultimo_acceso : DateTimeField [null]
+    + intentos_fallidos : PositiveIntegerField
+    + bloqueado : BooleanField
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+    --
+    + set_password(raw) : void
+    + check_password(raw) : bool
+  }
+
+  Propietario "1" -- "1" Credencial : propietario (OneToOne)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: arrendatarios
+' ────────────────────────────────────────────────────────────
+package "arrendatarios" {
+
+  class Arrendatario {
+    + id : int (PK)
+    --
+    + nombre : CharField(120)
+    + apellidos : CharField(120)
+    + telefono : CharField(20)
+    + email : EmailField
+    + fecha_nacimiento : DateField [null]
+    + folio_ine : CharField(20)
+    + foto : ImageField [null]
+    + mascotas : BooleanField
+    + hijos : BooleanField
+    + estado : CharField  {activo | inactivo}
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  Propietario "1" o-- "0..*" Arrendatario : propietario (FK)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: propiedades
+' ────────────────────────────────────────────────────────────
+package "propiedades" {
+
+  class Propiedad {
+    + id : int (PK)
+    --
+    + nombre : CharField(200)
+    + direccion : TextField
+    + ciudad : CharField(120)
+    + estado_geografico : CharField(120)
+    + codigo_postal : CharField(5)
+    + tipo : CharField  {casa|departamento|local|oficina|terreno|otro}
+    + descripcion : TextField
+    + costo_renta : DecimalField(12,2)
+    + superficie_m2 : DecimalField(10,2) [null]
+    + estado : CharField  {disponible|rentada|mantenimiento|inactiva}
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  class PropiedadDetalle {
+    + id : int (PK)
+    --
+    + clave : CharField(100)
+    + valor : CharField(255)
+    -- unique_together: (propiedad, clave) --
+  }
+
+  class Mobiliario {
+    + id : int (PK)
+    --
+    + nombre : CharField(200)
+    + tipo : CharField(100)
+    + descripcion : TextField
+    + foto : ImageField [null]
+  }
+
+  class PropiedadMobiliario {
+    + id : int (PK)
+    --
+    + cantidad : PositiveIntegerField
+    + valor_estimado : DecimalField(10,2) [null]
+    + estado : CharField  {bueno|regular|malo|reparacion}
+    -- unique_together: (propiedad, mobiliario) --
+  }
+
+  class FotoPropiedad {
+    + id : int (PK)
+    --
+    + imagen : ImageField
+    + descripcion : CharField(255)
+    + es_principal : BooleanField
+    + orden : PositiveSmallIntegerField
+    + created_at : DateTimeField
+  }
+
+  Propietario "1" o-- "0..*" Propiedad : propietario (FK)
+  Propiedad "1" *-- "0..*" PropiedadDetalle : propiedad (FK)
+  Propiedad "1" *-- "0..*" PropiedadMobiliario : propiedad (FK)
+  Mobiliario "1" o-- "0..*" PropiedadMobiliario : mobiliario (FK)
+  Propiedad "1" *-- "0..*" FotoPropiedad : propiedad (FK)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: contratos
+' ────────────────────────────────────────────────────────────
+package "contratos" {
+
+  class Contrato {
+    + id : int (PK)
+    --
+    + fecha_inicio : DateField
+    + fecha_fin : DateField
+    + renta_acordada : DecimalField(12,2)
+    + deposito : DecimalField(12,2)
+    + dia_pago : PositiveSmallIntegerField
+    + periodo_pago : CharField  {diario|mensual|anual}
+    + incremento_anual : DecimalField(5,2)
+    + penalizacion_anticipada : DecimalField(12,2)
+    + estado : CharField  {borrador|activo|finalizado|cancelado|renovado}
+    + observaciones : TextField
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+    --
+    + clean() : void
+  }
+
+  class HistorialContrato {
+    + id : int (PK)
+    --
+    + estado_anterior : CharField(15)
+    + estado_nuevo : CharField(15)
+    + motivo : TextField
+    + fecha_cambio : DateTimeField
+    + created_at : DateTimeField
+  }
+
+  Propiedad "1" o-- "0..*" Contrato : propiedad (FK)
+  Arrendatario "1" o-- "0..*" Contrato : arrendatario (FK)
+  Contrato "1" *-- "0..*" HistorialContrato : contrato (FK)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: pagos
+' ────────────────────────────────────────────────────────────
+package "pagos" {
+
+  class Pago {
+    + id : int (PK)
+    --
+    + periodo : CharField(30)
+    + monto : DecimalField(12,2)
+    + fecha_limite : DateField
+    + fecha_pago : DateField [null]
+    + metodo_pago : CharField  {transferencia|efectivo|deposito|tarjeta|otro}
+    + referencia : CharField(100)
+    + comprobante_url : FileField [null]
+    + recargo_mora : DecimalField(10,2)
+    + estado : CharField  {pendiente|pagado|vencido|parcial|cancelado}
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  class FichaPago {
+    + id : int (PK)
+    --
+    + codigo_referencia : CharField(50)
+    + clabe_interbancaria : CharField(18)
+    + banco : CharField(100)
+    + archivo_pdf : FileField [null]
+    + fecha_generacion : DateTimeField
+  }
+
+  class Factura {
+    + id : int (PK)
+    --
+    + folio_fiscal : CharField(100) (unique)
+    + subtotal : DecimalField(12,2)
+    + iva : DecimalField(12,2)
+    + total : DecimalField(12,2)
+    + xml_path : FileField [null]
+    + pdf_path : FileField [null]
+    + fecha_emision : DateTimeField
+  }
+
+  Contrato "1" o-- "0..*" Pago : contrato (FK)
+  Pago "1" -- "0..1" FichaPago : pago (OneToOne)
+  Pago "1" -- "0..1" Factura : pago (OneToOne)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: fiscal
+' ────────────────────────────────────────────────────────────
+package "fiscal" {
+
+  class DatosFiscales {
+    + id : int (PK)
+    --
+    + tipo_entidad : CharField  {propietario | arrendatario}
+    + entidad_id : PositiveBigIntegerField  <<generic FK>>
+    + nombre_o_razon_social : CharField(255)
+    + rfc : CharField(13)
+    + regimen_fiscal : CharField(100)
+    + uso_cfdi : CharField(10)
+    + codigo_postal : CharField(5)
+    + correo_facturacion : EmailField
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  Factura "0..*" --> "1" DatosFiscales : datos_fiscales_emisor (FK)
+  Factura "0..*" --> "1" DatosFiscales : datos_fiscales_receptor (FK)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: documentos
+' ────────────────────────────────────────────────────────────
+package "documentos" {
+
+  class Documento {
+    + id : int (PK)
+    --
+    + tipo_entidad : CharField  {propiedad|contrato|arrendatario|propietario|reporte}
+    + entidad_id : PositiveBigIntegerField  <<generic FK>>
+    + tipo_documento : CharField  {contrato_pdf|ine|comprobante_domicilio|foto|escritura|otro}
+    + nombre_archivo : CharField(255)
+    + ruta_archivo : FileField
+    + descripcion : TextField
+    + created_at : DateTimeField
+  }
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: mantenimiento
+' ────────────────────────────────────────────────────────────
+package "mantenimiento" {
+
+  class Especialista {
+    + id : int (PK)
+    --
+    + nombre : CharField(200)
+    + especialidad : CharField(100)
+    + telefono : CharField(20)
+    + email : EmailField
+    + ciudad : CharField(120)
+    + estado_geografico : CharField(120)
+    + calificacion : DecimalField(3,2)
+    + anios_experiencia : PositiveSmallIntegerField
+    + disponible : BooleanField
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  class ReporteMantenimiento {
+    + id : int (PK)
+    --
+    + descripcion : TextField
+    + tipo_especialista : CharField(100)
+    + prioridad : CharField  {baja|media|alta|urgente}
+    + estado : CharField  {abierto|en_proceso|resuelto|cancelado}
+    + costo_estimado : DecimalField(10,2) [null]
+    + costo_final : DecimalField(10,2) [null]
+    + fecha_resolucion : DateTimeField [null]
+    + created_at : DateTimeField
+    + updated_at : DateTimeField
+  }
+
+  class ResenaEspecialista {
+    + id : int (PK)
+    --
+    + calificacion : PositiveSmallIntegerField  (1-5)
+    + comentario : TextField
+    + created_at : DateTimeField
+    -- unique_together: (propietario, reporte) --
+  }
+
+  Propiedad "1" o-- "0..*" ReporteMantenimiento : propiedad (FK)
+  Especialista "1" o-- "0..*" ReporteMantenimiento : especialista (FK, null)
+  Propietario "1" o-- "0..*" ReporteMantenimiento : propietario (FK)
+  Especialista "1" o-- "0..*" ResenaEspecialista : especialista (FK)
+  Propietario "1" o-- "0..*" ResenaEspecialista : propietario (FK)
+  ReporteMantenimiento "1" o-- "0..*" ResenaEspecialista : reporte (FK)
+}
+
+' ────────────────────────────────────────────────────────────
+' PAQUETE: notificaciones
+' ────────────────────────────────────────────────────────────
+package "notificaciones" {
+
+  class Notificacion {
+    + id : int (PK)
+    --
+    + tipo : CharField  {pago_proximo|pago_vencido|contrato_por_vencer|general}
+    + titulo : CharField(200)
+    + mensaje : TextField
+    + fecha_programada : DateTimeField
+    + medio : CharField  {email|sms|push|whatsapp}
+    + created_at : DateTimeField
+  }
+
+  class NotificacionLog {
+    + id : int (PK)
+    --
+    + intento_numero : PositiveSmallIntegerField
+    + estado : CharField  {enviado|fallido|pendiente}
+    + mensaje_error : TextField
+    + fecha_envio : DateTimeField
+  }
+
+  Contrato "1" o-- "0..*" Notificacion : contrato (FK)
+  Notificacion "1" *-- "0..*" NotificacionLog : notificacion (FK)
+}
+
+@enduml

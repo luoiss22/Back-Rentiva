@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -59,6 +60,26 @@ class Contrato(models.Model):
 
     def __str__(self):
         return f"Contrato #{self.pk} — {self.propiedad} → {self.arrendatario}"
+
+    def clean(self):
+        errors = {}
+        if self.fecha_inicio and self.fecha_fin:
+            if self.fecha_fin <= self.fecha_inicio:
+                errors["fecha_fin"] = "La fecha de fin debe ser posterior a la fecha de inicio."
+        # No permitir dos contratos activos en la misma propiedad
+        if self.estado in (self.Estado.ACTIVO, self.Estado.BORRADOR):
+            qs = Contrato.objects.filter(
+                propiedad=self.propiedad,
+                estado__in=[self.Estado.ACTIVO, self.Estado.BORRADOR],
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                errors["propiedad"] = (
+                    "Ya existe un contrato activo o en borrador para esta propiedad."
+                )
+        if errors:
+            raise ValidationError(errors)
 
 
 class HistorialContrato(models.Model):

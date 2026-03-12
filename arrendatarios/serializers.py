@@ -6,7 +6,7 @@ class ArrendatarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Arrendatario
         fields = "__all__"
-        read_only_fields = ("created_at", "updated_at")
+        read_only_fields = ("created_at", "updated_at", "propietario")
 
 
 class ArrendatarioListSerializer(serializers.ModelSerializer):

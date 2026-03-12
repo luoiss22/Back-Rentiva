@@ -17,6 +17,16 @@ class NotificacionSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("created_at",)
 
+    def validate_contrato(self, contrato):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        if user and getattr(user, "rol", None) != "admin":
+            if contrato.propiedad.propietario_id != user.pk:
+                raise serializers.ValidationError(
+                    "No puedes crear notificaciones en contratos ajenos."
+                )
+        return contrato
+
 
 class NotificacionListSerializer(serializers.ModelSerializer):
     class Meta:

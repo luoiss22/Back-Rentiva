@@ -77,6 +77,7 @@ class Mobiliario(models.Model):
     nombre = models.CharField(max_length=200)
     tipo = models.CharField(max_length=100, blank=True)
     descripcion = models.TextField(blank=True)
+    foto = models.ImageField(upload_to="mobiliario/fotos/", blank=True, null=True)
 
     class Meta:
         db_table = "mobiliario"
@@ -123,3 +124,38 @@ class PropiedadMobiliario(models.Model):
 
     def __str__(self):
         return f"{self.mobiliario} × {self.cantidad} → {self.propiedad}"
+
+
+class FotoPropiedad(models.Model):
+    """Galería de fotos de una propiedad."""
+
+    propiedad = models.ForeignKey(
+        Propiedad,
+        on_delete=models.CASCADE,
+        related_name="fotos",
+    )
+    imagen = models.ImageField(upload_to="propiedades/fotos/")
+    descripcion = models.CharField(max_length=255, blank=True)
+    es_principal = models.BooleanField(
+        default=False,
+        help_text="Marca esta foto como imagen principal de la propiedad",
+    )
+    orden = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "propiedad_fotos"
+        ordering = ["orden", "-es_principal"]
+        verbose_name = "Foto de propiedad"
+        verbose_name_plural = "Fotos de propiedad"
+
+    def __str__(self):
+        return f"Foto de {self.propiedad} ({'principal' if self.es_principal else self.orden})"
+
+    def save(self, *args, **kwargs):
+        # Si esta foto se marca como principal, desmarcar las demás
+        if self.es_principal:
+            FotoPropiedad.objects.filter(
+                propiedad=self.propiedad, es_principal=True,
+            ).exclude(pk=self.pk).update(es_principal=False)
+        super().save(*args, **kwargs)

@@ -7,7 +7,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r"especialistas", EspecialistaViewSet)
-router.register(r"reportes-mantenimiento", ReporteMantenimientoViewSet)
-router.register(r"resenas-especialistas", ResenaEspecialistaViewSet)
+router.register(r"reportes-mantenimiento", ReporteMantenimientoViewSet, basename="reporte-mantenimiento")
+router.register(r"resenas-especialistas", ResenaEspecialistaViewSet, basename="resena-especialista")
 
 urlpatterns = router.urls
