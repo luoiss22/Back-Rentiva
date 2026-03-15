@@ -139,7 +139,10 @@ SIMPLE_JWT = {
 # ── CORS ───────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:5173",
+    default="http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:5000",
     cast=Csv(),
 )
 CORS_ALLOW_CREDENTIALS = True
+# En desarrollo, permitir todas las origins (Flutter usa 10.0.2.2 u otros puertos)
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
