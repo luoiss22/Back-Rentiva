@@ -22,7 +22,7 @@ class ResenaEspecialistaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResenaEspecialista
         fields = "__all__"
-        read_only_fields = ("created_at",)
+        read_only_fields = ("created_at", "propietario")
 
 
 class ReporteMantenimientoSerializer(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class ReporteMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReporteMantenimiento
         fields = "__all__"
-        read_only_fields = ("created_at", "updated_at")
+        read_only_fields = ("created_at", "updated_at", "propietario")
 
 
 class ReporteMantenimientoListSerializer(serializers.ModelSerializer):
