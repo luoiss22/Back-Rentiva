@@ -2,7 +2,23 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 
 
-class Propietario(models.Model):
+class PropietarioAuthMixin:
+    """
+    Mixin que satisface la interfaz mínima que DRF espera en request.user.
+    Los atributos is_authenticated e is_active se resuelven como propiedades
+    para que nunca sean sobreescritos por Django ORM.
+    """
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+
+class Propietario(PropietarioAuthMixin, models.Model):
     """Propietario / arrendador de inmuebles."""
 
     class Rol(models.TextChoices):

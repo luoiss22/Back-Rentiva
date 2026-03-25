@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import Avg
 
 
 class Especialista(models.Model):
@@ -27,6 +28,13 @@ class Especialista(models.Model):
 
     def __str__(self):
         return f"{self.nombre} — {self.especialidad}"
+
+    def recalcular_calificacion(self):
+        """Recalcula el promedio de reseñas y guarda el campo calificacion."""
+        promedio = self.resenas.aggregate(avg=Avg("calificacion"))["avg"]
+        self.calificacion = round(promedio, 2) if promedio is not None else 0
+        self.save(update_fields=["calificacion"])
+
 
 
 class ReporteMantenimiento(models.Model):
@@ -123,3 +131,12 @@ class ResenaEspecialista(models.Model):
 
     def __str__(self):
         return f"★{self.calificacion} — {self.especialista}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.especialista.recalcular_calificacion()
+
+    def delete(self, *args, **kwargs):
+        especialista = self.especialista
+        super().delete(*args, **kwargs)
+        especialista.recalcular_calificacion()

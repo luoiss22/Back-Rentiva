@@ -33,5 +33,5 @@ class NotificacionListSerializer(serializers.ModelSerializer):
         model = Notificacion
         fields = (
             "id", "contrato", "tipo", "titulo",
-            "fecha_programada", "medio",
+            "fecha_programada", "medio", "leida",
         )

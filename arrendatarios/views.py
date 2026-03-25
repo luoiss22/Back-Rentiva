@@ -16,7 +16,7 @@ class ArrendatarioViewSet(viewsets.ModelViewSet):
     ordering_fields = ("nombre", "apellidos", "created_at")
 
     def get_queryset(self):
-        qs = Arrendatario.objects.select_related("propietario")
+        qs = Arrendatario.objects.select_related("propietario").prefetch_related("contratos__propiedad")
         user = self.request.user
         if getattr(user, "rol", None) == "admin":
             return qs
@@ -33,3 +33,6 @@ class ArrendatarioViewSet(viewsets.ModelViewSet):
             serializer.save(propietario=user)
         else:
             serializer.save()
+
+    def get_owner_id(self, obj):
+        return obj.propietario_id

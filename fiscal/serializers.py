@@ -33,4 +33,9 @@ class DatosFiscalesSerializer(serializers.ModelSerializer):
 class DatosFiscalesListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DatosFiscales
-        fields = ("id", "tipo_entidad", "entidad_id", "rfc", "nombre_o_razon_social")
+        fields = (
+            "id", "tipo_entidad", "entidad_id",
+            "nombre_o_razon_social", "rfc",
+            "regimen_fiscal", "uso_cfdi",
+            "codigo_postal", "correo_facturacion",
+        )

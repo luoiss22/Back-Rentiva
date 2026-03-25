@@ -10,6 +10,14 @@ class ArrendatarioSerializer(serializers.ModelSerializer):
 
 
 class ArrendatarioListSerializer(serializers.ModelSerializer):
+    propiedad_actual = serializers.SerializerMethodField()
+
     class Meta:
         model = Arrendatario
-        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado")
+        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado", "propiedad_actual")
+
+    def get_propiedad_actual(self, obj):
+        contrato = obj.contratos.filter(estado="activo").first()
+        if contrato:
+            return contrato.propiedad.nombre
+        return "Sin propiedad"

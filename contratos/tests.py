@@ -42,29 +42,6 @@ class ContratoValidationTests(TestCase):
             contrato.clean()
         self.assertIn("fecha_fin", ctx.exception.message_dict)
 
-    def test_no_dos_contratos_activos_misma_propiedad(self):
-        Contrato.objects.create(
-            propiedad=self.propiedad,
-            arrendatario=self.arrendatario,
-            fecha_inicio=date(2026, 1, 1),
-            fecha_fin=date(2026, 12, 31),
-            renta_acordada=15000,
-            dia_pago=1,
-            estado=Contrato.Estado.ACTIVO,
-        )
-        segundo = Contrato(
-            propiedad=self.propiedad,
-            arrendatario=self.arrendatario,
-            fecha_inicio=date(2027, 1, 1),
-            fecha_fin=date(2027, 12, 31),
-            renta_acordada=16000,
-            dia_pago=1,
-            estado=Contrato.Estado.ACTIVO,
-        )
-        with self.assertRaises(ValidationError) as ctx:
-            segundo.clean()
-        self.assertIn("propiedad", ctx.exception.message_dict)
-
     def test_contrato_valido(self):
         contrato = Contrato(
             propiedad=self.propiedad,

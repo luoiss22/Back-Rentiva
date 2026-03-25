@@ -55,12 +55,15 @@ def login_view(request):
 def me_view(request):
     """GET: perfil del propietario autenticado. PATCH: actualizar perfil."""
     if request.method == "PATCH":
+        # Solo permitir actualizar estos campos desde el perfil
+        CAMPOS_PERMITIDOS = {"nombre", "apellidos", "fecha_nacimiento", "telefono", "email", "folio_ine"}
+        data_filtrada = {k: v for k, v in request.data.items() if k in CAMPOS_PERMITIDOS}
         serializer = PropietarioSerializer(
-            request.user, data=request.data, partial=True,
+            request.user, data=data_filtrada, partial=True,
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(PropietarioSerializer(request.user).data)
     return Response(PropietarioSerializer(request.user).data)
 
 

@@ -34,13 +34,20 @@ class ReporteMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReporteMantenimiento
         fields = "__all__"
-        read_only_fields = ("created_at", "updated_at", "propietario")
+        read_only_fields = ("created_at", "updated_at", "propietario", "fecha_resolucion")
 
 
+# El list serializer ahora incluye los campos que el front necesita
+# para renderizar la tarjeta sin hacer una request de detalle extra.
 class ReporteMantenimientoListSerializer(serializers.ModelSerializer):
+    especialista_nombre = serializers.CharField(
+        source="especialista.nombre", read_only=True, default=None,
+    )
+
     class Meta:
         model = ReporteMantenimiento
         fields = (
-            "id", "propiedad", "especialista", "prioridad",
-            "estado", "created_at",
+            "id", "propiedad", "especialista", "especialista_nombre",
+            "descripcion", "tipo_especialista", "prioridad",
+            "estado", "costo_estimado", "costo_final", "created_at",
         )

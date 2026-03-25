@@ -10,20 +10,38 @@ from .serializers import (
 )
 
 
+from .utils import generar_pagos_pendientes
+
 class PagoViewSet(viewsets.ModelViewSet):
     """
     Admin: ve todos los pagos.
     Propietario: solo pagos de contratos de sus propiedades.
     """
     permission_classes = [IsOwnerOrAdmin]
-    filterset_fields = ("estado", "metodo_pago", "contrato")
+    filterset_fields = ("estado", "metodo_pago", "contrato", "contrato__arrendatario", "contrato__propiedad")
     search_fields = ("periodo", "referencia")
     ordering_fields = ("fecha_limite", "fecha_pago", "monto")
+
+    def list(self, request, *args, **kwargs):
+        # Generar pagos pendientes automáticamente al listar
+        # El try/except evita que un error en la generación rompa el listado
+        try:
+            generar_pagos_pendientes(request.user)
+        except Exception:
+            pass
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = Pago.objects.select_related(
             "contrato__propiedad__propietario",
+            "contrato__arrendatario",
         ).prefetch_related("ficha", "factura")
+        
+        # Filtro manual de propiedad
+        prop_id = self.request.query_params.get("propiedad")
+        if prop_id:
+            qs = qs.filter(contrato__propiedad_id=prop_id)
+            
         user = self.request.user
         if getattr(user, "rol", None) == "admin":
             return qs

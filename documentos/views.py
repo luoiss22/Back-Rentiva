@@ -47,3 +47,17 @@ class DocumentoViewSet(viewsets.ModelViewSet):
             | Q(tipo_entidad="contrato", entidad_id__in=contrato_ids)
             | Q(tipo_entidad="arrendatario", entidad_id__in=arrendatario_ids)
         )
+
+    def get_owner_id(self, obj):
+        if obj.tipo_entidad == "propietario":
+            return obj.entidad_id
+        if obj.tipo_entidad == "propiedad":
+            from propiedades.models import Propiedad
+            return Propiedad.objects.filter(pk=obj.entidad_id).values_list("propietario_id", flat=True).first()
+        if obj.tipo_entidad == "contrato":
+            from contratos.models import Contrato
+            return Contrato.objects.filter(pk=obj.entidad_id).values_list("propiedad__propietario_id", flat=True).first()
+        if obj.tipo_entidad == "arrendatario":
+            from arrendatarios.models import Arrendatario
+            return Arrendatario.objects.filter(pk=obj.entidad_id).values_list("propietario_id", flat=True).first()
+        return None

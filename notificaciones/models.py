@@ -28,6 +28,7 @@ class Notificacion(models.Model):
     mensaje = models.TextField(blank=True)
     fecha_programada = models.DateTimeField()
     medio = models.CharField(max_length=15, choices=Medio.choices, default=Medio.EMAIL)
+    leida = models.BooleanField(default=False, help_text="Indica si el usuario ya vio esta notificación en la app")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

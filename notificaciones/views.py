@@ -1,4 +1,6 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Notificacion, NotificacionLog
@@ -31,6 +33,13 @@ class NotificacionViewSet(viewsets.ModelViewSet):
 
     def get_owner_id(self, obj):
         return obj.contrato.propiedad.propietario_id
+
+    @action(detail=False, methods=["post"])
+    def marcar_leidas(self, request):
+        """Marca todas las notificaciones del usuario como leídas."""
+        qs = self.get_queryset().filter(leida=False)
+        actualizadas = qs.update(leida=True)
+        return Response({"leidas": actualizadas, "status": "ok"}, status=status.HTTP_200_OK)
 
 
 class NotificacionLogViewSet(viewsets.ModelViewSet):

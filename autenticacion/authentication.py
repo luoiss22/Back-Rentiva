@@ -25,9 +25,8 @@ class PropietarioJWTAuthentication(JWTAuthentication):
             propietario = Propietario.objects.get(pk=user_id)
         except Propietario.DoesNotExist:
             return None
-        # DRF espera que request.user tenga is_authenticated
-        propietario.is_authenticated = True
-        propietario.is_active = propietario.estado != Propietario.Estado.SUSPENDIDO
+        if propietario.estado == propietario.Estado.SUSPENDIDO:
+            return None
         return propietario
 
 

@@ -20,6 +20,17 @@ class DatosFiscalesViewSet(viewsets.ModelViewSet):
             return DatosFiscalesListSerializer
         return DatosFiscalesSerializer
 
+    def get_owner_id(self, obj):
+        """Para DatosFiscales de tipo propietario, el owner es entidad_id."""
+        if obj.tipo_entidad == "propietario":
+            return obj.entidad_id
+        # Para arrendatario, buscar el propietario del arrendatario
+        from arrendatarios.models import Arrendatario
+        try:
+            return Arrendatario.objects.filter(pk=obj.entidad_id).values_list("propietario_id", flat=True).first()
+        except Exception:
+            return None
+
     def get_queryset(self):
         qs = DatosFiscales.objects.all()
         user = self.request.user
