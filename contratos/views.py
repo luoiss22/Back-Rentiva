@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import viewsets
 
 from autenticacion.permissions import IsOwnerOrAdmin
@@ -7,6 +8,27 @@ from .serializers import (
     ContratoListSerializer,
     HistorialContratoSerializer,
 )
+
+
+def _sync_propiedad_estado(contrato):
+    """Sincroniza el estado de la propiedad según el estado del contrato."""
+    from propiedades.models import Propiedad
+    propiedad = contrato.propiedad
+    if contrato.estado == Contrato.Estado.ACTIVO:
+        nuevo = Propiedad.Estado.RENTADA
+    elif contrato.estado in (Contrato.Estado.FINALIZADO, Contrato.Estado.CANCELADO):
+        # Solo libera si no hay otro contrato activo en la misma propiedad
+        tiene_otro_activo = Contrato.objects.filter(
+            propiedad=propiedad,
+            estado=Contrato.Estado.ACTIVO,
+        ).exclude(pk=contrato.pk).exists()
+        nuevo = Propiedad.Estado.DISPONIBLE if not tiene_otro_activo else None
+    else:
+        nuevo = None
+
+    if nuevo and propiedad.estado != nuevo:
+        propiedad.estado = nuevo
+        propiedad.save(update_fields=['estado'])
 
 
 class ContratoViewSet(viewsets.ModelViewSet):
@@ -32,6 +54,21 @@ class ContratoViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return ContratoListSerializer
         return ContratoSerializer
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        estado_anterior = instance.estado
+        contrato = serializer.save()
+        estado_nuevo = contrato.estado
+
+        # Registrar en historial si el estado cambió
+        if estado_anterior != estado_nuevo:
+            HistorialContrato.objects.create(
+                contrato=contrato,
+                estado_anterior=estado_anterior,
+                estado_nuevo=estado_nuevo,
+            )
+            _sync_propiedad_estado(contrato)
 
     def get_owner_id(self, obj):
         return obj.propiedad.propietario_id

@@ -9,13 +9,22 @@ from .serializers import (
     NotificacionListSerializer,
     NotificacionLogSerializer,
 )
+from .utils import generar_notificaciones_automaticas
 
 
 class NotificacionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrAdmin]
-    filterset_fields = ("tipo", "medio", "contrato")
+    filterset_fields = ("tipo", "medio", "contrato", "leida")
     search_fields = ("titulo", "mensaje")
     ordering_fields = ("fecha_programada",)
+
+    def list(self, request, *args, **kwargs):
+        # Generar notificaciones automáticas al listar
+        try:
+            generar_notificaciones_automaticas(request.user)
+        except Exception:
+            pass
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = Notificacion.objects.select_related(
@@ -46,7 +55,7 @@ class NotificacionLogViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrAdmin]
     serializer_class = NotificacionLogSerializer
     filterset_fields = ("notificacion", "estado")
-    http_method_names = ["get", "head", "options"]  # Solo lectura
+    http_method_names = ["get", "head", "options"]
 
     def get_queryset(self):
         qs = NotificacionLog.objects.select_related(
