@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Documento
 from .serializers import DocumentoSerializer, DocumentoListSerializer
@@ -22,7 +23,7 @@ class DocumentoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Documento.objects.all()
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         # Filtra documentos cuyo tipo_entidad=propietario y entidad_id=user.pk
         # más los vinculados a propiedades, contratos, etc. del propietario

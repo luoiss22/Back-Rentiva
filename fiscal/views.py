@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import DatosFiscales
 from .serializers import DatosFiscalesSerializer, DatosFiscalesListSerializer
@@ -34,7 +35,7 @@ class DatosFiscalesViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = DatosFiscales.objects.all()
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         from django.db.models import Q
         from arrendatarios.models import Arrendatario

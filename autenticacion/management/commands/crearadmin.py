@@ -11,11 +11,11 @@ import getpass
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from autenticacion.models import Propietario, Credencial
+from autenticacion.models import Administrador, CredencialAdmin, Propietario
 
 
 class Command(BaseCommand):
-    help = "Crea el primer usuario administrador (empresa programadora)."
+    help = "Crea un usuario administrador del sistema."
 
     def add_arguments(self, parser):
         parser.add_argument("--nombre", type=str, default="Admin")
@@ -25,8 +25,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        # ── Verificar si ya existe un admin ──────────────────────
-        admins = Propietario.objects.filter(rol=Propietario.Rol.ADMIN)
+        # Verificar si ya existe un admin
+        admins = Administrador.objects.all()
         if admins.exists():
             self.stdout.write(
                 self.style.WARNING(
@@ -34,47 +34,48 @@ class Command(BaseCommand):
                     f"{', '.join(a.email for a in admins)}"
                 )
             )
-            respuesta = input("¿Crear otro admin de todas formas? [s/N]: ")
+            respuesta = input("Crear otro admin de todas formas? [s/N]: ")
             if respuesta.lower() != "s":
                 self.stdout.write("Cancelado.")
                 return
 
-        # ── Recopilar datos ──────────────────────────────────────
+        # Recopilar datos
         email = options["email"]
         if not email:
             email = input("Email del admin: ").strip()
         if not email:
             raise CommandError("El email es obligatorio.")
 
+        if Administrador.objects.filter(email=email).exists():
+            raise CommandError(f"Ya existe un admin con email {email}.")
         if Propietario.objects.filter(email=email).exists():
             raise CommandError(f"Ya existe un propietario con email {email}.")
 
         password = options["password"]
         if not password:
-            password = getpass.getpass("Contraseña: ")
-            password2 = getpass.getpass("Confirmar contraseña: ")
+            password = getpass.getpass("Contrasena: ")
+            password2 = getpass.getpass("Confirmar contrasena: ")
             if password != password2:
-                raise CommandError("Las contraseñas no coinciden.")
+                raise CommandError("Las contrasenas no coinciden.")
         if len(password) < 8:
-            raise CommandError("La contraseña debe tener al menos 8 caracteres.")
+            raise CommandError("La contrasena debe tener al menos 8 caracteres.")
 
         nombre = options["nombre"]
         apellidos = options["apellidos"]
 
-        # ── Crear propietario + credencial ────────────────────────
-        propietario = Propietario.objects.create(
+        # Crear administrador + credencial
+        admin = Administrador.objects.create(
             nombre=nombre,
             apellidos=apellidos,
             email=email,
-            rol=Propietario.Rol.ADMIN,
         )
-        credencial = Credencial(propietario=propietario, email=email)
-        credencial.set_password(password)
-        credencial.save()
+        cred = CredencialAdmin(administrador=admin, email=email)
+        cred.set_password(password)
+        cred.save()
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Admin creado exitosamente: {propietario.nombre} "
-                f"{propietario.apellidos} ({email})"
+                f"Admin creado exitosamente: {admin.nombre} "
+                f"{admin.apellidos} ({email})"
             )
         )

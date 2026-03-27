@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import viewsets
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Contrato, HistorialContrato
 from .serializers import (
@@ -46,7 +47,7 @@ class ContratoViewSet(viewsets.ModelViewSet):
             "propiedad__propietario", "arrendatario",
         ).prefetch_related("historial")
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propiedad__propietario=user)
 
@@ -85,7 +86,7 @@ class HistorialContratoViewSet(viewsets.ModelViewSet):
             "contrato__propiedad__propietario",
         )
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(contrato__propiedad__propietario=user)
 

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import viewsets
 
-from autenticacion.permissions import IsOwnerOrAdmin, IsAdminOrReadOnly
+from autenticacion.permissions import IsAdminOrReadOnly, IsOwner
 from .models import Especialista, ReporteMantenimiento, ResenaEspecialista
 from .serializers import (
     EspecialistaSerializer,
@@ -29,19 +29,15 @@ class EspecialistaViewSet(viewsets.ModelViewSet):
 
 
 class ReporteMantenimientoViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsOwnerOrAdmin]
-    filterset_fields = ("estado", "prioridad", "propiedad", "especialista", "propietario")
+    permission_classes = [IsOwner]
+    filterset_fields = ("estado", "prioridad", "propiedad", "especialista")
     search_fields = ("descripcion",)
     ordering_fields = ("created_at", "prioridad")
 
     def get_queryset(self):
-        qs = ReporteMantenimiento.objects.select_related(
+        return ReporteMantenimiento.objects.select_related(
             "propiedad", "especialista", "propietario",
-        ).prefetch_related("resenas")
-        user = self.request.user
-        if getattr(user, "rol", None) == "admin":
-            return qs
-        return qs.filter(propietario=user)
+        ).prefetch_related("resenas").filter(propietario=self.request.user)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -49,11 +45,7 @@ class ReporteMantenimientoViewSet(viewsets.ModelViewSet):
         return ReporteMantenimientoSerializer
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if getattr(user, "rol", None) != "admin":
-            serializer.save(propietario=user)
-        else:
-            serializer.save()
+        serializer.save(propietario=self.request.user)
 
     def perform_update(self, serializer):
         """Si el estado cambia a 'resuelto', registra la fecha automáticamente."""
@@ -75,25 +67,17 @@ class ReporteMantenimientoViewSet(viewsets.ModelViewSet):
 
 
 class ResenaEspecialistaViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsOwnerOrAdmin]
+    permission_classes = [IsOwner]
     serializer_class = ResenaEspecialistaSerializer
-    filterset_fields = ("especialista", "propietario", "calificacion")
+    filterset_fields = ("especialista", "calificacion")
 
     def get_queryset(self):
-        qs = ResenaEspecialista.objects.select_related(
+        return ResenaEspecialista.objects.select_related(
             "especialista", "propietario", "reporte",
-        )
-        user = self.request.user
-        if getattr(user, "rol", None) == "admin":
-            return qs
-        return qs.filter(propietario=user)
+        ).filter(propietario=self.request.user)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if getattr(user, "rol", None) != "admin":
-            serializer.save(propietario=user)
-        else:
-            serializer.save()
+        serializer.save(propietario=self.request.user)
 
     def get_owner_id(self, obj):
         return obj.propietario_id

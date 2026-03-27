@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Arrendatario
 from .serializers import ArrendatarioSerializer, ArrendatarioListSerializer
@@ -18,7 +19,7 @@ class ArrendatarioViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = Arrendatario.objects.select_related("propietario").prefetch_related("contratos__propiedad")
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propietario=user)
 
@@ -29,7 +30,7 @@ class ArrendatarioViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if getattr(user, "rol", None) != "admin":
+        if not isinstance(user, Administrador):
             serializer.save(propietario=user)
         else:
             serializer.save()

@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin, IsAdminOrReadOnly
 from .models import Propiedad, PropiedadDetalle, Mobiliario, PropiedadMobiliario, FotoPropiedad
 from .serializers import (
@@ -27,7 +28,7 @@ class PropiedadViewSet(viewsets.ModelViewSet):
             "detalles", "mobiliarios__mobiliario", "fotos",
         )
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propietario=user)
 
@@ -39,7 +40,7 @@ class PropiedadViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Si no es admin, fuerza el propietario al usuario autenticado."""
         user = self.request.user
-        if getattr(user, "rol", None) != "admin":
+        if not isinstance(user, Administrador):
             serializer.save(propietario=user)
         else:
             serializer.save()
@@ -53,7 +54,7 @@ class PropiedadDetalleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = PropiedadDetalle.objects.select_related("propiedad__propietario")
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propiedad__propietario=user)
 
@@ -79,7 +80,7 @@ class PropiedadMobiliarioViewSet(viewsets.ModelViewSet):
             "propiedad__propietario", "mobiliario",
         )
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propiedad__propietario=user)
 
@@ -96,7 +97,7 @@ class FotoPropiedadViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = FotoPropiedad.objects.select_related("propiedad__propietario")
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(propiedad__propietario=user)
 

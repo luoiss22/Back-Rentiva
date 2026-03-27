@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Notificacion, NotificacionLog
 from .serializers import (
@@ -31,7 +32,7 @@ class NotificacionViewSet(viewsets.ModelViewSet):
             "contrato__propiedad__propietario",
         ).prefetch_related("logs")
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(contrato__propiedad__propietario=user)
 
@@ -62,7 +63,7 @@ class NotificacionLogViewSet(viewsets.ModelViewSet):
             "notificacion__contrato__propiedad__propietario",
         )
         user = self.request.user
-        if getattr(user, "rol", None) == "admin":
+        if isinstance(user, Administrador):
             return qs
         return qs.filter(notificacion__contrato__propiedad__propietario=user)
 

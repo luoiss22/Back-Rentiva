@@ -1,22 +1,25 @@
 """
-Permisos personalizados basados en el rol del Propietario.
+Permisos personalizados basados en el tipo de usuario.
 
-- IsAdmin: solo usuarios con rol=admin
+- IsAdmin: solo Administradores
 - IsAdminOrReadOnly: admin puede escribir, propietario solo leer
 - IsOwnerOrAdmin: propietario solo accede a sus propios recursos; admin a todo
 """
 
 from rest_framework.permissions import BasePermission, SAFE_METHODS
+from .models import Administrador
+
+
+def _is_admin(user):
+    """Verifica si el user es un Administrador."""
+    return isinstance(user, Administrador)
 
 
 class IsAdmin(BasePermission):
-    """Solo permite acceso a usuarios con rol=admin (la empresa)."""
+    """Solo permite acceso a Administradores."""
 
     def has_permission(self, request, view):
-        return (
-            hasattr(request.user, "rol")
-            and request.user.rol == "admin"
-        )
+        return _is_admin(request.user)
 
 
 class IsAdminOrReadOnly(BasePermission):
@@ -25,38 +28,43 @@ class IsAdminOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
+        return _is_admin(request.user)
+
+
+class IsOwner(BasePermission):
+    """Solo propietarios autenticados. Admins bloqueados completamente."""
+
+    def has_permission(self, request, view):
         return (
-            hasattr(request.user, "rol")
-            and request.user.rol == "admin"
+            bool(request.user and getattr(request.user, "is_authenticated", False))
+            and not _is_admin(request.user)
         )
+
+    def has_object_permission(self, request, view, obj):
+        owner_id = _get_owner_id(view, obj)
+        return owner_id == request.user.pk
 
 
 class IsOwnerOrAdmin(BasePermission):
     """
     Admin accede a todo.
     Propietario solo accede a objetos que le pertenecen.
-
-    Para object-level, el ViewSet debe definir get_owner_id(obj)
-    o el objeto debe tener un campo `propietario` o `propietario_id`.
     """
 
     def has_permission(self, request, view):
         return bool(request.user and getattr(request.user, "is_authenticated", False))
 
     def has_object_permission(self, request, view, obj):
-        if hasattr(request.user, "rol") and request.user.rol == "admin":
+        if _is_admin(request.user):
             return True
-        # Intentar obtener el propietario_id del objeto
         owner_id = _get_owner_id(view, obj)
         return owner_id == request.user.pk
 
 
 def _get_owner_id(view, obj):
-    """Resuelve el propietario_id de un objeto según convenciones."""
-    # Si el ViewSet define explícitamente cómo obtener el owner
+    """Resuelve el propietario_id de un objeto segun convenciones."""
     if hasattr(view, "get_owner_id"):
         return view.get_owner_id(obj)
-    # Convenciones comunes
     if hasattr(obj, "propietario_id"):
         return obj.propietario_id
     if hasattr(obj, "propiedad") and hasattr(obj.propiedad, "propietario_id"):

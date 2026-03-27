@@ -9,6 +9,7 @@ pagos/utils.py genera los pagos pendientes.
 from datetime import date, timedelta
 from django.utils import timezone
 
+from autenticacion.models import Administrador
 from contratos.models import Contrato
 from pagos.models import Pago
 from notificaciones.models import Notificacion
@@ -25,7 +26,7 @@ def generar_notificaciones_automaticas(usuario):
     hoy = date.today()
     ahora = timezone.now()
 
-    if getattr(usuario, "rol", None) == "admin":
+    if isinstance(usuario, Administrador):
         contratos = Contrato.objects.filter(estado=Contrato.Estado.ACTIVO)
     else:
         contratos = Contrato.objects.filter(
