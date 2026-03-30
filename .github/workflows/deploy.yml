@@ -34,4 +34,4 @@ jobs:
             /var/www/rentiva/backend/.venv/bin/python manage.py collectstatic --noinput 
 
             echo "--- Restarting Gunicorn ---"
-            sudo systemctl restart rentiva-backend
+            systemctl restart rentiva-backend

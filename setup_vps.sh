@@ -40,7 +40,7 @@ cat > /var/www/rentiva/backend/.env << 'EOF'
 SECRET_KEY=django-insecure-tu_llave_secreta_aqui_cambiala
 DEBUG=False
 ALLOWED_HOSTS=23.94.202.152,localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://23.94.202.152
+CORS_ALLOWED_ORIGINS=http://23.94.202.152:8080
 DATABASE_URL=postgres://admin:root@127.0.0.1:5432/rentiva_db
 EOF
 
@@ -67,7 +67,7 @@ WorkingDirectory=/var/www/rentiva/backend
 EnvironmentFile=/var/www/rentiva/backend/.env
 ExecStart=/var/www/rentiva/backend/.venv/bin/gunicorn \
     --workers 3 \
-    --bind 127.0.0.1:8000 \
+    --bind 127.0.0.1:8001 \
     --access-logfile /var/log/rentiva-access.log \
     --error-logfile /var/log/rentiva-error.log \
     rentiva_backend.wsgi:application
@@ -87,7 +87,7 @@ systemctl start rentiva-backend
 # ── Nginx ─────────────────────────────────────────────────────
 cat > /etc/nginx/sites-available/rentiva << 'EOF'
 server {
-    listen 80;
+    listen 8080;
     server_name 23.94.202.152;
 
     # Frontend (Flutter web)
@@ -99,7 +99,7 @@ server {
 
     # Backend API
     location /api/ {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -107,7 +107,7 @@ server {
 
     # Admin de Django
     location /admin/ {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
@@ -123,12 +123,11 @@ server {
 EOF
 
 ln -sf /etc/nginx/sites-available/rentiva /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 
 echo ""
 echo "=== Setup completo ==="
-echo "Backend corriendo en http://127.0.0.1:8000"
-echo "Nginx sirviendo en http://23.94.202.152"
+echo "Backend corriendo en http://127.0.0.1:8001"
+echo "Nginx sirviendo en http://23.94.202.152:8080"
 echo ""
 echo "Recuerda que tu VPS ya está configurado"
