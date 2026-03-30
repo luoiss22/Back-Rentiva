@@ -6,7 +6,7 @@ VPS="root@23.94.202.152"
 
 echo ">>> Desplegando backend en el VPS..."
 
-ssh $VPS << 'EOF'
+ssh -t $VPS << 'EOF'
   ERRORS=0
 
   echo "--- Jalando cambios ---"
@@ -18,7 +18,7 @@ ssh $VPS << 'EOF'
   .venv/bin/pip install -r requirements.txt --quiet || { echo "[WARN] pip install falló, continuando..."; ERRORS=$((ERRORS+1)); }
 
   echo "--- Migraciones ---"
-  .venv/bin/python manage.py migrate --noinput || { echo "[WARN] migrate falló, continuando..."; ERRORS=$((ERRORS+1)); }
+  .venv/bin/python manage.py migrate --noinput --fake-initial || { echo "[WARN] migrate falló, continuando..."; ERRORS=$((ERRORS+1)); }
 
   echo "--- Archivos estáticos ---"
   .venv/bin/python manage.py collectstatic --noinput || { echo "[WARN] collectstatic falló, continuando..."; ERRORS=$((ERRORS+1)); }
@@ -41,6 +41,14 @@ ssh $VPS << 'EOF'
   echo "--- Estado de Gunicorn ---"
   systemctl status rentiva-backend --no-pager
 
+  echo ""
+  echo ">>> Cerrando en 500 segundos... (Ctrl+C para salir antes)"
+  for i in $(seq 500 -1 1); do
+    printf "\r    Tiempo restante: %3d segundos   " $i
+    sleep 1
+  done
+  echo ""
+  echo ">>> Tiempo agotado. Cerrando sesión."
 EOF
 
 echo ""
