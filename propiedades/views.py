@@ -41,9 +41,24 @@ class PropiedadViewSet(viewsets.ModelViewSet):
         """Si no es admin, fuerza el propietario al usuario autenticado."""
         user = self.request.user
         if not isinstance(user, Administrador):
-            serializer.save(propietario=user)
+            propiedad = serializer.save(propietario=user)
         else:
-            serializer.save()
+            propiedad = serializer.save()
+            
+        imagen = self.request.FILES.get("imagen")
+        if imagen:
+            FotoPropiedad.objects.create(propiedad=propiedad, imagen=imagen, es_principal=True)
+
+    def perform_update(self, serializer):
+        propiedad = serializer.save()
+        imagen = self.request.FILES.get("imagen")
+        if imagen:
+            foto = propiedad.fotos.filter(es_principal=True).first()
+            if foto:
+                foto.imagen = imagen
+                foto.save()
+            else:
+                FotoPropiedad.objects.create(propiedad=propiedad, imagen=imagen, es_principal=True)
 
 
 class PropiedadDetalleViewSet(viewsets.ModelViewSet):

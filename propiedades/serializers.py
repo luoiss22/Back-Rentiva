@@ -54,11 +54,19 @@ class PropiedadSerializer(serializers.ModelSerializer):
     detalles = PropiedadDetalleSerializer(many=True, read_only=True)
     mobiliarios = PropiedadMobiliarioSerializer(many=True, read_only=True)
     fotos = FotoPropiedadSerializer(many=True, read_only=True)
+    imagen = serializers.SerializerMethodField()
 
     class Meta:
         model = Propiedad
         fields = "__all__"
         read_only_fields = ("created_at", "updated_at", "propietario")
+
+    def get_imagen(self, obj):
+        foto = obj.fotos.filter(es_principal=True).first() or obj.fotos.first()
+        if foto and foto.imagen:
+            request = self.context.get("request")
+            return request.build_absolute_uri(foto.imagen.url) if request else foto.imagen.url
+        return None
 
 
 class PropiedadListSerializer(serializers.ModelSerializer):
