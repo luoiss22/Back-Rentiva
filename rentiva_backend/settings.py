@@ -75,8 +75,8 @@ WSGI_APPLICATION = "rentiva_backend.wsgi.application"
 # Usa DATABASE_URL para PostgreSQL en producción.
 # Fallback a SQLite para desarrollo local si no se define DATABASE_URL.
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    "default": dj_database_url.parse(
+        config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=600,
     )
 }
