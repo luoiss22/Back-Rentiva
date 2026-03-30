@@ -4,10 +4,18 @@ from .models import Propiedad, PropiedadDetalle, Mobiliario, PropiedadMobiliario
 
 
 class FotoPropiedadSerializer(serializers.ModelSerializer):
+    imagen = serializers.SerializerMethodField()
+
     class Meta:
         model = FotoPropiedad
         fields = ("id", "propiedad", "imagen", "descripcion", "es_principal", "orden", "created_at")
         read_only_fields = ("created_at",)
+
+    def get_imagen(self, obj):
+        if obj.imagen:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
+        return None
 
     def validate_propiedad(self, propiedad):
         return _validate_propiedad_ownership(self, propiedad)

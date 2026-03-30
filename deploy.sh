@@ -22,6 +22,11 @@ ssh $VPS << 'EOF'
   echo "--- Archivos estáticos ---"
   .venv/bin/python manage.py collectstatic --noinput
 
+  echo "--- Directorios de media ---"
+  mkdir -p media/propiedades/fotos
+  mkdir -p media/mobiliario/fotos
+  chmod -R 755 media
+
   echo "--- Reiniciando Gunicorn ---"
   systemctl restart rentiva-backend
 
