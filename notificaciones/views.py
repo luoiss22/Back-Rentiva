@@ -24,7 +24,7 @@ class NotificacionViewSet(viewsets.ModelViewSet):
         try:
             generar_notificaciones_automaticas(request.user)
         except Exception:
-            pass
+            pass  # Si falla la generación automática no interrumpimos el listado
         return super().list(request, *args, **kwargs)
 
     def get_queryset(self):

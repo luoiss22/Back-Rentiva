@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from autenticacion.models import Administrador
 from .models import Contrato, HistorialContrato
 
 
@@ -27,7 +27,7 @@ class ContratoSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        is_admin = getattr(user, "rol", None) == "admin"
+        is_admin = isinstance(user, Administrador)
 
         # Validar que la propiedad pertenece al usuario
         propiedad = attrs.get("propiedad", getattr(self.instance, "propiedad", None))

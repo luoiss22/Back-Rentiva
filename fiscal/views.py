@@ -2,6 +2,7 @@ from rest_framework import viewsets
 
 from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
+from arrendatarios.models import Arrendatario
 from .models import DatosFiscales
 from .serializers import DatosFiscalesSerializer, DatosFiscalesListSerializer
 
@@ -22,11 +23,8 @@ class DatosFiscalesViewSet(viewsets.ModelViewSet):
         return DatosFiscalesSerializer
 
     def get_owner_id(self, obj):
-        """Para DatosFiscales de tipo propietario, el owner es entidad_id."""
         if obj.tipo_entidad == "propietario":
             return obj.entidad_id
-        # Para arrendatario, buscar el propietario del arrendatario
-        from arrendatarios.models import Arrendatario
         try:
             return Arrendatario.objects.filter(pk=obj.entidad_id).values_list("propietario_id", flat=True).first()
         except Exception:
@@ -38,11 +36,7 @@ class DatosFiscalesViewSet(viewsets.ModelViewSet):
         if isinstance(user, Administrador):
             return qs
         from django.db.models import Q
-        from arrendatarios.models import Arrendatario
-
-        arrendatario_ids = Arrendatario.objects.filter(
-            propietario=user,
-        ).values_list("id", flat=True)
+        arrendatario_ids = Arrendatario.objects.filter(propietario=user).values_list("id", flat=True)
 
         return qs.filter(
             Q(tipo_entidad="propietario", entidad_id=user.pk)

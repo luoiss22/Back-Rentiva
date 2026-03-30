@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from autenticacion.models import Administrador
 from .models import Propiedad, PropiedadDetalle, Mobiliario, PropiedadMobiliario, FotoPropiedad
 
 
@@ -25,7 +26,7 @@ def _validate_propiedad_ownership(serializer_self, propiedad):
     """Valida que la propiedad pertenece al usuario autenticado."""
     request = serializer_self.context.get("request")
     user = getattr(request, "user", None) if request else None
-    if user and getattr(user, "rol", None) != "admin":
+    if user and not isinstance(user, Administrador):
         if propiedad.propietario_id != user.pk:
             raise serializers.ValidationError(
                 "No puedes operar sobre propiedades ajenas."

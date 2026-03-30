@@ -56,6 +56,12 @@ class ContratoViewSet(viewsets.ModelViewSet):
             return ContratoListSerializer
         return ContratoSerializer
 
+    def perform_create(self, serializer):
+        contrato = serializer.save()
+        # Si el contrato se crea ya en estado activo (solo admin puede), sincronizar propiedad.
+        if contrato.estado == Contrato.Estado.ACTIVO:
+            _sync_propiedad_estado(contrato)
+
     def perform_update(self, serializer):
         instance = self.get_object()
         estado_anterior = instance.estado

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from autenticacion.models import Administrador
 from .models import Pago, FichaPago, Factura
 from fiscal.models import DatosFiscales
 
@@ -54,7 +55,7 @@ class FichaPagoSerializer(serializers.ModelSerializer):
     def validate_pago(self, pago):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        if user and getattr(user, "rol", None) != "admin":
+        if user and not isinstance(user, Administrador):
             if pago.contrato.propiedad.propietario_id != user.pk:
                 raise serializers.ValidationError(
                     "No puedes crear fichas en pagos ajenos."
@@ -71,7 +72,7 @@ class FacturaSerializer(serializers.ModelSerializer):
     def validate_pago(self, pago):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        if user and getattr(user, "rol", None) != "admin":
+        if user and not isinstance(user, Administrador):
             if pago.contrato.propiedad.propietario_id != user.pk:
                 raise serializers.ValidationError(
                     "No puedes crear facturas en pagos ajenos."
@@ -131,7 +132,7 @@ class PagoSerializer(serializers.ModelSerializer):
     def validate_contrato(self, contrato):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        if user and getattr(user, "rol", None) != "admin":
+        if user and not isinstance(user, Administrador):
             if contrato.propiedad.propietario_id != user.pk:
                 raise serializers.ValidationError(
                     "No puedes crear pagos en contratos ajenos."

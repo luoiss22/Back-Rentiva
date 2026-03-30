@@ -1,6 +1,5 @@
 from rest_framework import viewsets
 
-from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin
 from .models import Pago, FichaPago, Factura
 from .serializers import (
@@ -44,7 +43,7 @@ class PagoViewSet(viewsets.ModelViewSet):
             qs = qs.filter(contrato__propiedad_id=prop_id)
             
         user = self.request.user
-        if isinstance(user, Administrador):
+        if getattr(user, "rol", None) == "admin":
             return qs
         return qs.filter(contrato__propiedad__propietario=user)
 
@@ -67,7 +66,7 @@ class FichaPagoViewSet(viewsets.ModelViewSet):
             "pago__contrato__propiedad__propietario",
         )
         user = self.request.user
-        if isinstance(user, Administrador):
+        if getattr(user, "rol", None) == "admin":
             return qs
         return qs.filter(pago__contrato__propiedad__propietario=user)
 
@@ -88,7 +87,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             "datos_fiscales_receptor",
         )
         user = self.request.user
-        if isinstance(user, Administrador):
+        if getattr(user, "rol", None) == "admin":
             return qs
         return qs.filter(pago__contrato__propiedad__propietario=user)
 
