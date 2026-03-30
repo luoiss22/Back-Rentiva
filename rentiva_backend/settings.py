@@ -102,6 +102,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# URL base pública del servidor (sin slash final).
+# Necesaria para construir URLs absolutas de media cuando Nginx quita el puerto.
+SITE_BASE_URL = config("SITE_BASE_URL", default="")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ── Django REST Framework ──────────────────────────────────────────

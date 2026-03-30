@@ -1,6 +1,17 @@
 from rest_framework import serializers
+from django.conf import settings
 from autenticacion.models import Administrador
 from .models import Propiedad, PropiedadDetalle, Mobiliario, PropiedadMobiliario, FotoPropiedad
+
+
+def _build_media_url(imagen_field):
+    """Construye URL absoluta para un ImageField usando SITE_BASE_URL del settings."""
+    if not imagen_field:
+        return None
+    base = getattr(settings, "SITE_BASE_URL", "").rstrip("/")
+    if base:
+        return f"{base}{imagen_field.url}"
+    return imagen_field.url
 
 
 class FotoPropiedadSerializer(serializers.ModelSerializer):
@@ -13,12 +24,8 @@ class FotoPropiedadSerializer(serializers.ModelSerializer):
 
     def get_imagen(self, obj):
         if obj.imagen:
-            request = self.context.get("request")
-            return request.build_absolute_uri(obj.imagen.url) if request else obj.imagen.url
+            return _build_media_url(obj.imagen)
         return None
-
-    def validate_propiedad(self, propiedad):
-        return _validate_propiedad_ownership(self, propiedad)
 
 
 class PropiedadDetalleSerializer(serializers.ModelSerializer):
@@ -72,8 +79,7 @@ class PropiedadSerializer(serializers.ModelSerializer):
     def get_imagen(self, obj):
         foto = obj.fotos.filter(es_principal=True).first() or obj.fotos.first()
         if foto and foto.imagen:
-            request = self.context.get("request")
-            return request.build_absolute_uri(foto.imagen.url) if request else foto.imagen.url
+            return _build_media_url(foto.imagen)
         return None
 
 
@@ -93,8 +99,7 @@ class PropiedadListSerializer(serializers.ModelSerializer):
     def get_foto_principal(self, obj):
         foto = obj.fotos.filter(es_principal=True).first() or obj.fotos.first()
         if foto and foto.imagen:
-            request = self.context.get("request")
-            return request.build_absolute_uri(foto.imagen.url) if request else foto.imagen.url
+            return _build_media_url(foto.imagen)
         return None
 
 
