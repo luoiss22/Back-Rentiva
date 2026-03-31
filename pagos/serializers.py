@@ -63,7 +63,12 @@ class FichaPagoSerializer(serializers.ModelSerializer):
         return pago
 
 
+from fiscal.serializers import DatosFiscalesSerializer
+
 class FacturaSerializer(serializers.ModelSerializer):
+    emisor_detalles = DatosFiscalesSerializer(source="datos_fiscales_emisor", read_only=True)
+    receptor_detalles = DatosFiscalesSerializer(source="datos_fiscales_receptor", read_only=True)
+
     class Meta:
         model = Factura
         fields = "__all__"
@@ -113,6 +118,9 @@ class PagoSerializer(serializers.ModelSerializer):
     ficha = FichaPagoSerializer(read_only=True)
     factura = FacturaSerializer(read_only=True)
     inquilino_nombre = serializers.SerializerMethodField()
+    propietario_nombre = serializers.SerializerMethodField()
+    propietario_banco = serializers.SerializerMethodField()
+    propietario_clabe = serializers.SerializerMethodField()
     datos_fiscales_faltantes = serializers.SerializerMethodField()
 
     class Meta:
@@ -129,6 +137,24 @@ class PagoSerializer(serializers.ModelSerializer):
         except AttributeError:
             return "Desconocido"
 
+    def get_propietario_nombre(self, obj):
+        try:
+            return f"{obj.contrato.propiedad.propietario.nombre} {obj.contrato.propiedad.propietario.apellidos}".strip()
+        except AttributeError:
+            return "Desconocido"
+            
+    def get_propietario_banco(self, obj):
+        try:
+            return getattr(obj.contrato.propiedad.propietario, "banco", "")
+        except AttributeError:
+            return ""
+
+    def get_propietario_clabe(self, obj):
+        try:
+            return getattr(obj.contrato.propiedad.propietario, "clabe_interbancaria", "")
+        except AttributeError:
+            return ""
+
     def validate_contrato(self, contrato):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
@@ -144,6 +170,9 @@ class PagoListSerializer(serializers.ModelSerializer):
     contrato_id = serializers.IntegerField(source="contrato.id", read_only=True)
     propiedad_id = serializers.IntegerField(source="contrato.propiedad.id", read_only=True)
     inquilino_nombre = serializers.SerializerMethodField()
+    propietario_nombre = serializers.SerializerMethodField()
+    propietario_banco = serializers.SerializerMethodField()
+    propietario_clabe = serializers.SerializerMethodField()
     ficha = FichaPagoSerializer(read_only=True)
     factura = FacturaSerializer(read_only=True)
     datos_fiscales_faltantes = serializers.SerializerMethodField()
@@ -151,7 +180,8 @@ class PagoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago
         fields = (
-            "id", "contrato_id", "propiedad_id", "inquilino_nombre", "periodo", "monto",
+            "id", "contrato_id", "propiedad_id", "inquilino_nombre", "propietario_nombre", 
+            "propietario_banco", "propietario_clabe", "periodo", "monto",
             "fecha_limite", "fecha_pago", "estado", "recargo_mora",
             "metodo_pago", "referencia", "comprobante_url", "created_at",
             "ficha", "factura", "datos_fiscales_faltantes"
@@ -162,6 +192,24 @@ class PagoListSerializer(serializers.ModelSerializer):
             return f"{obj.contrato.arrendatario.nombre} {obj.contrato.arrendatario.apellidos}".strip()
         except AttributeError:
             return "Desconocido"
+
+    def get_propietario_nombre(self, obj):
+        try:
+            return f"{obj.contrato.propiedad.propietario.nombre} {obj.contrato.propiedad.propietario.apellidos}".strip()
+        except AttributeError:
+            return "Desconocido"
+            
+    def get_propietario_banco(self, obj):
+        try:
+            return getattr(obj.contrato.propiedad.propietario, "banco", "")
+        except AttributeError:
+            return ""
+
+    def get_propietario_clabe(self, obj):
+        try:
+            return getattr(obj.contrato.propiedad.propietario, "clabe_interbancaria", "")
+        except AttributeError:
+            return ""
 
     def get_datos_fiscales_faltantes(self, obj):
         return _calcular_datos_fiscales_faltantes(obj)

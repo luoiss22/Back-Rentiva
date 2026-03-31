@@ -99,6 +99,8 @@ class Propietario(AuthUserMixin, models.Model):
     telefono = models.CharField(max_length=20, blank=True)
     email = models.EmailField(unique=True)
     folio_ine = models.CharField(max_length=20, blank=True)
+    banco = models.CharField(max_length=100, blank=True)
+    clabe_interbancaria = models.CharField("CLABE interbancaria", max_length=18, blank=True)
     foto = models.ImageField(upload_to="propietarios/fotos/", blank=True, null=True)
     estado = models.CharField(max_length=20, choices=Estado.choices, default=Estado.ACTIVO)
     created_at = models.DateTimeField(auto_now_add=True)
