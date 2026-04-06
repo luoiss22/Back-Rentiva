@@ -78,10 +78,10 @@ class PropiedadDetalleViewSet(viewsets.ModelViewSet):
 
 
 class MobiliarioViewSet(viewsets.ModelViewSet):
-    """Catálogo compartido. Admin escribe, propietario solo lee."""
+    """Catálogo compartido. Admin y propietario pueden escribir."""
     queryset = Mobiliario.objects.all()
     serializer_class = MobiliarioSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsOwnerOrAdmin]
     search_fields = ("nombre", "tipo")
 
 

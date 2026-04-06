@@ -76,7 +76,12 @@ def me_view(request):
     SerializerClass = AdministradorSerializer if is_admin else PropietarioSerializer
 
     if request.method == "PATCH":
-        CAMPOS_PERMITIDOS = {"nombre", "apellidos", "fecha_nacimiento", "telefono", "email", "folio_ine"}
+        # Los propietarios pueden actualizar también sus datos bancarios.
+        CAMPOS_PERMITIDOS = {
+            "nombre", "apellidos", "fecha_nacimiento", "telefono", "email", "folio_ine",
+        }
+        if not is_admin:
+            CAMPOS_PERMITIDOS.update({"banco", "clabe_interbancaria", "foto"})
         data_filtrada = {k: v for k, v in request.data.items() if k in CAMPOS_PERMITIDOS}
         serializer = SerializerClass(user, data=data_filtrada, partial=True)
         serializer.is_valid(raise_exception=True)

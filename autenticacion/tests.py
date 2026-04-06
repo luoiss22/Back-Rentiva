@@ -2,24 +2,37 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from .models import Propietario, Credencial
+from .models import Administrador, CredencialAdmin, Propietario, Credencial
 
 
 def _crear_usuario(nombre, email, password="segura1234", rol="propietario"):
     """Helper: crea Propietario + Credencial y devuelve (propietario, token)."""
-    propietario = Propietario.objects.create(
-        nombre=nombre, apellidos="Test", email=email, rol=rol,
-    )
-    cred = Credencial(propietario=propietario, email=email)
-    cred.set_password(password)
-    cred.save()
+    if rol == "admin":
+        usuario = Administrador.objects.create(
+            nombre=nombre,
+            apellidos="Test",
+            email=email,
+        )
+        cred = CredencialAdmin(administrador=usuario, email=email)
+        cred.set_password(password)
+        cred.save()
+    else:
+        usuario = Propietario.objects.create(
+            nombre=nombre,
+            apellidos="Test",
+            email=email,
+        )
+        cred = Credencial(propietario=usuario, email=email)
+        cred.set_password(password)
+        cred.save()
+
     client = APIClient()
     resp = client.post(
         "/api/v1/auth/login/",
         {"email": email, "password": password},
         format="json",
     )
-    return propietario, resp.data["tokens"]["access"]
+    return usuario, resp.data["tokens"]["access"]
 
 
 class RegistroTests(TestCase):
@@ -76,8 +89,8 @@ class RegistroTests(TestCase):
         }
         resp = self.client.post(self.url, data, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        prop = Propietario.objects.get(email="hack@test.com")
-        self.assertEqual(prop.rol, "propietario")
+        self.assertFalse(Administrador.objects.filter(email="hack@test.com").exists())
+        self.assertEqual(resp.data["user_type"], "propietario")
 
 
 class LoginTests(TestCase):
@@ -266,7 +279,8 @@ class RolSeguridadTests(TestCase):
             {"rol": "admin"},
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        # Endpoint no expuesto en el API actual.
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_admin_puede_cambiar_rol(self):
         self._auth(self.token_admin)
@@ -275,9 +289,8 @@ class RolSeguridadTests(TestCase):
             {"rol": "admin"},
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.prop_b.refresh_from_db()
-        self.assertEqual(self.prop_b.rol, "admin")
+        # Endpoint no expuesto en el API actual.
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     # ── Catálogos (IsAdminOrReadOnly) ─────────────────────────────
     def test_propietario_puede_leer_especialistas(self):
@@ -345,9 +358,29 @@ class MePatchTests(TestCase):
             format="json",
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data["nombre"], "Actualizado")
+        self.assertEqual(resp.data["usuario"]["nombre"], "Actualizado")
         self.prop.refresh_from_db()
         self.assertEqual(self.prop.nombre, "Actualizado")
+
+    def test_patch_me_actualiza_banco_y_clabe(self):
+        resp = self.client.patch(
+            "/api/v1/auth/me/",
+            {
+                "banco": "BBVA",
+                "clabe_interbancaria": "012345678901234567",
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["usuario"]["banco"], "BBVA")
+        self.assertEqual(
+            resp.data["usuario"]["clabe_interbancaria"],
+            "012345678901234567",
+        )
+
+        self.prop.refresh_from_db()
+        self.assertEqual(self.prop.banco, "BBVA")
+        self.assertEqual(self.prop.clabe_interbancaria, "012345678901234567")
 
     def test_patch_me_no_cambia_rol(self):
         resp = self.client.patch(
@@ -357,7 +390,25 @@ class MePatchTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.prop.refresh_from_db()
-        self.assertEqual(self.prop.rol, "propietario")
+        self.assertFalse(Administrador.objects.filter(email=self.prop.email).exists())
+        self.assertEqual(resp.data["user_type"], "propietario")
+
+    def test_patch_me_ignora_campo_no_permitido(self):
+        self.prop.nombre = "Original"
+        self.prop.save(update_fields=["nombre"])
+
+        resp = self.client.patch(
+            "/api/v1/auth/me/",
+            {"rol": "admin", "nombre": "Valido"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["usuario"]["nombre"], "Valido")
+
+        self.prop.refresh_from_db()
+        self.assertEqual(self.prop.nombre, "Valido")
+        self.assertFalse(Administrador.objects.filter(email=self.prop.email).exists())
+        self.assertEqual(resp.data["user_type"], "propietario")
 
 
 class FKOwnershipTests(TestCase):

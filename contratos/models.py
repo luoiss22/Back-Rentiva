@@ -66,6 +66,40 @@ class Contrato(models.Model):
         if self.fecha_inicio and self.fecha_fin:
             if self.fecha_fin <= self.fecha_inicio:
                 errors["fecha_fin"] = "La fecha de fin debe ser posterior a la fecha de inicio."
+
+        # Evita asignar la misma propiedad a más de un contrato activo al mismo tiempo.
+        if self.propiedad_id and self.estado == self.Estado.ACTIVO:
+            from propiedades.models import Propiedad
+
+            # Solo se puede activar sobre propiedades disponibles.
+            # Excepción: actualización del mismo contrato activo ya existente.
+            es_mismo_activo = False
+            if self.pk:
+                es_mismo_activo = Contrato.objects.filter(
+                    pk=self.pk,
+                    propiedad_id=self.propiedad_id,
+                    estado=self.Estado.ACTIVO,
+                ).exists()
+
+            estado_propiedad = None
+            if getattr(self, "propiedad", None) is not None:
+                estado_propiedad = self.propiedad.estado
+            else:
+                estado_propiedad = Propiedad.objects.filter(
+                    pk=self.propiedad_id,
+                ).values_list("estado", flat=True).first()
+
+            if estado_propiedad != Propiedad.Estado.DISPONIBLE and not es_mismo_activo:
+                errors["propiedad"] = "La propiedad no está disponible para renta."
+
+            activos = Contrato.objects.filter(
+                propiedad_id=self.propiedad_id,
+                estado=self.Estado.ACTIVO,
+            )
+            if self.pk:
+                activos = activos.exclude(pk=self.pk)
+            if activos.exists():
+                errors["propiedad"] = "La propiedad ya tiene un contrato activo."
         if errors:
             raise ValidationError(errors)
 

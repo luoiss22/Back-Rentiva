@@ -43,8 +43,26 @@ class ContratoSerializer(serializers.ModelSerializer):
                 {"arrendatario": "No puedes usar arrendatarios ajenos."}
             )
 
-        # Ejecutar validaciones del modelo
-        instance = Contrato(**attrs)
+        # Ejecutar validaciones del modelo con el estado efectivo (útil para PATCH parcial).
+        if self.instance:
+            data_for_clean = {
+                "propiedad": attrs.get("propiedad", self.instance.propiedad),
+                "arrendatario": attrs.get("arrendatario", self.instance.arrendatario),
+                "fecha_inicio": attrs.get("fecha_inicio", self.instance.fecha_inicio),
+                "fecha_fin": attrs.get("fecha_fin", self.instance.fecha_fin),
+                "renta_acordada": attrs.get("renta_acordada", self.instance.renta_acordada),
+                "deposito": attrs.get("deposito", self.instance.deposito),
+                "dia_pago": attrs.get("dia_pago", self.instance.dia_pago),
+                "periodo_pago": attrs.get("periodo_pago", self.instance.periodo_pago),
+                "incremento_anual": attrs.get("incremento_anual", self.instance.incremento_anual),
+                "penalizacion_anticipada": attrs.get("penalizacion_anticipada", self.instance.penalizacion_anticipada),
+                "estado": attrs.get("estado", self.instance.estado),
+                "observaciones": attrs.get("observaciones", self.instance.observaciones),
+            }
+        else:
+            data_for_clean = attrs
+
+        instance = Contrato(**data_for_clean)
         if self.instance:
             instance.pk = self.instance.pk
         instance.clean()
@@ -65,5 +83,7 @@ class ContratoListSerializer(serializers.ModelSerializer):
             "id", "propiedad", "propiedad_nombre",
             "arrendatario", "arrendatario_nombre",
             "fecha_inicio", "fecha_fin", "renta_acordada",
+            "deposito", "dia_pago", "incremento_anual",
+            "penalizacion_anticipada", "observaciones",
             "periodo_pago", "estado",
         )

@@ -58,9 +58,33 @@ def generar_pagos_pendientes(usuario):
     else:
         contratos_activos = Contrato.objects.filter(propiedad__propietario=usuario, estado=Contrato.Estado.ACTIVO)
 
+    def _upsert_pago_no_liquidado(contrato, periodo_str, monto, fecha_lim):
+        pago, creado = Pago.objects.get_or_create(
+            contrato=contrato,
+            periodo=periodo_str,
+            defaults={
+                'monto': monto,
+                'fecha_limite': fecha_lim,
+                'estado': Pago.Estado.PENDIENTE,
+            }
+        )
+
+        # Si ya existe y no está liquidado, sincronizar monto/fecha límite ante cambios de contrato.
+        if not creado and pago.estado != Pago.Estado.PAGADO:
+            cambios = False
+            if pago.monto != monto:
+                pago.monto = monto
+                cambios = True
+            if pago.fecha_limite != fecha_lim:
+                pago.fecha_limite = fecha_lim
+                cambios = True
+            if cambios:
+                pago.save()
+
     for contrato in contratos_activos:
         if contrato.periodo_pago == Contrato.PeriodoPago.MENSUAL:
             fecha_iter = contrato.fecha_inicio
+            es_primer_periodo = True
             
             while fecha_iter <= hoy and fecha_iter <= contrato.fecha_fin:
                 periodo_str = f"{fecha_iter.year}-{fecha_iter.month:02d}"
@@ -69,22 +93,18 @@ def generar_pagos_pendientes(usuario):
                     last_day = calendar.monthrange(fecha_iter.year, fecha_iter.month)[1]
                     day_to_use = min(contrato.dia_pago, last_day)
                     fecha_lim = date(fecha_iter.year, fecha_iter.month, day_to_use)
+                    # Si el contrato inicia a mitad de periodo, no crear un vencimiento anterior al inicio.
+                    if es_primer_periodo and fecha_lim < contrato.fecha_inicio:
+                        fecha_lim = contrato.fecha_inicio
                 except ValueError:
                     fecha_lim = fecha_iter
                 
                 monto = _calcular_renta_con_incremento(contrato, fecha_iter)
 
-                Pago.objects.get_or_create(
-                    contrato=contrato,
-                    periodo=periodo_str,
-                    defaults={
-                        'monto': monto,
-                        'fecha_limite': fecha_lim,
-                        'estado': Pago.Estado.PENDIENTE,
-                    }
-                )
+                _upsert_pago_no_liquidado(contrato, periodo_str, monto, fecha_lim)
                 
                 fecha_iter = agregar_meses(fecha_iter, 1)
+                es_primer_periodo = False
 
         elif contrato.periodo_pago == Contrato.PeriodoPago.DIARIO:
             fecha_iter = contrato.fecha_inicio
@@ -92,19 +112,12 @@ def generar_pagos_pendientes(usuario):
                 periodo_str = fecha_iter.strftime("%Y-%m-%d")
                 monto = _calcular_renta_con_incremento(contrato, fecha_iter)
 
-                Pago.objects.get_or_create(
-                    contrato=contrato,
-                    periodo=periodo_str,
-                    defaults={
-                        'monto': monto,
-                        'fecha_limite': fecha_iter,
-                        'estado': Pago.Estado.PENDIENTE,
-                    }
-                )
+                _upsert_pago_no_liquidado(contrato, periodo_str, monto, fecha_iter)
                 fecha_iter += timedelta(days=1)
 
         elif contrato.periodo_pago == Contrato.PeriodoPago.ANUAL:
             fecha_iter = contrato.fecha_inicio
+            es_primer_periodo = True
             while fecha_iter <= hoy and fecha_iter <= contrato.fecha_fin:       
                 periodo_str = f"{fecha_iter.year}"
 
@@ -112,19 +125,14 @@ def generar_pagos_pendientes(usuario):
                     last_day = calendar.monthrange(fecha_iter.year, fecha_iter.month)[1]
                     day_to_use = min(contrato.dia_pago, last_day)
                     fecha_lim = date(fecha_iter.year, fecha_iter.month, day_to_use)
+                    if es_primer_periodo and fecha_lim < contrato.fecha_inicio:
+                        fecha_lim = contrato.fecha_inicio
                 except ValueError:
                     fecha_lim = fecha_iter
 
                 monto = _calcular_renta_con_incremento(contrato, fecha_iter)
 
-                Pago.objects.get_or_create(
-                    contrato=contrato,
-                    periodo=periodo_str,
-                    defaults={
-                        'monto': monto,
-                        'fecha_limite': fecha_lim,
-                        'estado': Pago.Estado.PENDIENTE,
-                    }
-                )
+                _upsert_pago_no_liquidado(contrato, periodo_str, monto, fecha_lim)
 
                 fecha_iter = agregar_meses(fecha_iter, 12)
+                es_primer_periodo = False
