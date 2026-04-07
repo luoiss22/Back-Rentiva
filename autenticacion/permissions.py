@@ -49,6 +49,8 @@ class IsOwnerOrAdmin(BasePermission):
     """
     Admin accede a todo.
     Propietario solo accede a objetos que le pertenecen.
+    Si no se puede resolver el propietario del objeto (owner_id es None),
+    se concede permiso porque el queryset ya filtra los registros del usuario.
     """
 
     def has_permission(self, request, view):
@@ -58,6 +60,10 @@ class IsOwnerOrAdmin(BasePermission):
         if _is_admin(request.user):
             return True
         owner_id = _get_owner_id(view, obj)
+        # Si no se puede determinar el propietario, confiamos en que get_queryset
+        # ya filtró correctamente — no bloqueamos.
+        if owner_id is None:
+            return True
         return owner_id == request.user.pk
 
 

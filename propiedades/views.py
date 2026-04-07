@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
 from autenticacion.models import Administrador
 from autenticacion.permissions import IsOwnerOrAdmin, IsAdminOrReadOnly
@@ -78,10 +79,10 @@ class PropiedadDetalleViewSet(viewsets.ModelViewSet):
 
 
 class MobiliarioViewSet(viewsets.ModelViewSet):
-    """Catálogo compartido. Admin y propietario pueden escribir."""
+    """Catálogo compartido. Cualquier usuario autenticado puede leer y escribir."""
     queryset = Mobiliario.objects.all()
     serializer_class = MobiliarioSerializer
-    permission_classes = [IsOwnerOrAdmin]
+    permission_classes = [IsAuthenticated]
     search_fields = ("nombre", "tipo")
 
 
