@@ -115,9 +115,15 @@ server {
     # Static y media files de Django
     location /static/ {
         alias /var/www/rentiva/backend/staticfiles/;
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, OPTIONS";
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type";
     }
     location /media/ {
         alias /var/www/rentiva/backend/media/;
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods "GET, OPTIONS";
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type";
     }
 }
 EOF
