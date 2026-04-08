@@ -58,9 +58,11 @@ class ContratoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         contrato = serializer.save()
-        # Si el contrato se crea ya en estado activo (solo admin puede), sincronizar propiedad.
+        # Si el contrato se crea ya en estado activo, sincronizar propiedad y arrendatario.
         if contrato.estado == Contrato.Estado.ACTIVO:
             _sync_propiedad_estado(contrato)
+            from arrendatarios.models import Arrendatario
+            Arrendatario.objects.filter(pk=contrato.arrendatario_id).update(estado='activo')
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -76,6 +78,29 @@ class ContratoViewSet(viewsets.ModelViewSet):
                 estado_nuevo=estado_nuevo,
             )
             _sync_propiedad_estado(contrato)
+
+            # Al activar, asegurarse de que el arrendatario esté activo
+            if estado_nuevo == Contrato.Estado.ACTIVO:
+                from arrendatarios.models import Arrendatario
+                Arrendatario.objects.filter(pk=contrato.arrendatario_id).update(estado='activo')
+
+            # Al cancelar o finalizar, marcar los pagos pendientes/vencidos como cancelados
+            if estado_nuevo in (Contrato.Estado.CANCELADO, Contrato.Estado.FINALIZADO):
+                from pagos.models import Pago
+                Pago.objects.filter(
+                    contrato=contrato,
+                    estado__in=(Pago.Estado.PENDIENTE, Pago.Estado.VENCIDO),
+                ).update(estado=Pago.Estado.CANCELADO)
+
+                # Si el arrendatario ya no tiene ningún contrato activo, marcarlo inactivo
+                from arrendatarios.models import Arrendatario
+                arrendatario = contrato.arrendatario
+                tiene_activos = Contrato.objects.filter(
+                    arrendatario=arrendatario,
+                    estado=Contrato.Estado.ACTIVO,
+                ).exists()
+                if not tiene_activos:
+                    Arrendatario.objects.filter(pk=arrendatario.pk).update(estado='inactivo')
 
     def get_owner_id(self, obj):
         return obj.propiedad.propietario_id

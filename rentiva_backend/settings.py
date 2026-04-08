@@ -106,6 +106,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 # Necesaria para construir URLs absolutas de media cuando Nginx quita el puerto.
 SITE_BASE_URL = config("SITE_BASE_URL", default="")
 
+# ── Límites de subida de archivos ──────────────────────────────────
+# Máximo 20 MB por archivo. Debe coincidir con client_max_body_size en nginx.
+_MAX_UPLOAD_MB = config("MAX_UPLOAD_MB", default=20, cast=int)
+DATA_UPLOAD_MAX_MEMORY_SIZE = _MAX_UPLOAD_MB * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = _MAX_UPLOAD_MB * 1024 * 1024
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ── Django REST Framework ──────────────────────────────────────────
