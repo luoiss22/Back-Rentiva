@@ -15,7 +15,7 @@ class AdministradorSerializer(serializers.ModelSerializer):
 class AdministradorListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Administrador
-        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado")
+        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado", "foto")
 
 
 class RegistroAdminSerializer(serializers.Serializer):
@@ -58,7 +58,7 @@ class PropietarioSerializer(serializers.ModelSerializer):
 class PropietarioListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Propietario
-        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado")
+        fields = ("id", "nombre", "apellidos", "email", "telefono", "estado", "foto")
 
 
 class RegistroSerializer(serializers.Serializer):
