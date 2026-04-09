@@ -169,6 +169,7 @@ class PagoSerializer(serializers.ModelSerializer):
 class PagoListSerializer(serializers.ModelSerializer):
     contrato_id = serializers.IntegerField(source="contrato.id", read_only=True)
     propiedad_id = serializers.IntegerField(source="contrato.propiedad.id", read_only=True)
+    propiedad_nombre = serializers.CharField(source="contrato.propiedad.nombre", read_only=True)
     inquilino_nombre = serializers.SerializerMethodField()
     propietario_nombre = serializers.SerializerMethodField()
     propietario_banco = serializers.SerializerMethodField()
@@ -180,7 +181,8 @@ class PagoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago
         fields = (
-            "id", "contrato_id", "propiedad_id", "inquilino_nombre", "propietario_nombre", 
+            "id", "contrato_id", "propiedad_id", "propiedad_nombre",
+            "inquilino_nombre", "propietario_nombre",
             "propietario_banco", "propietario_clabe", "periodo", "monto",
             "fecha_limite", "fecha_pago", "estado", "recargo_mora",
             "metodo_pago", "referencia", "comprobante_url", "created_at",
