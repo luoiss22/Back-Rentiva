@@ -11,6 +11,7 @@ from .views import (
     me_view,
     cambio_password_view,
     logout_view,
+    eliminar_cuenta_view,
 )
 
 router = DefaultRouter()
@@ -26,6 +27,7 @@ urlpatterns = [
     path("auth/me/", me_view, name="auth-me"),
     path("auth/cambio-password/", cambio_password_view, name="auth-cambio-password"),
     path("auth/logout/", logout_view, name="auth-logout"),
+    path("auth/eliminar-cuenta/", eliminar_cuenta_view, name="auth-eliminar-cuenta"),
     # Admin only: registrar otro admin
     path("admin/registro/", registro_admin_view, name="admin-registro"),
 ] + router.urls

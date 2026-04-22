@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -136,6 +137,48 @@ def logout_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     return Response({"detail": "Sesion cerrada correctamente."})
+
+
+# ── Eliminar cuenta (ambos tipos) ─────────────────────────────────
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def eliminar_cuenta_view(request):
+    """Elimina de forma permanente la cuenta autenticada."""
+    password_actual = request.data.get("password_actual") if hasattr(request, "data") else None
+    if not password_actual:
+        return Response(
+            {"password_actual": ["Este campo es requerido."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    credencial = getattr(request.user, "credencial", None)
+    if credencial is None or not credencial.check_password(password_actual):
+        return Response(
+            {"password_actual": ["La contrasena actual es incorrecta."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    refresh_token = request.data.get("refresh") if hasattr(request, "data") else None
+    if refresh_token:
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError:
+            # Si el token ya expiró o es inválido, seguimos con la eliminación.
+            pass
+
+    user = request.user
+    with transaction.atomic():
+        foto = getattr(user, "foto", None)
+        if foto:
+            try:
+                foto.delete(save=False)
+            except Exception:
+                pass
+        user.delete()
+
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ── CRUD Administradores (solo admin) ─────────────────────────────

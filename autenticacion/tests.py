@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
 
@@ -35,6 +36,15 @@ def _crear_usuario(nombre, email, password="segura1234", rol="propietario"):
     return usuario, resp.data["tokens"]["access"]
 
 
+def _fake_image(name="avatar.gif"):
+    """Imagen GIF minima valida para tests multipart."""
+    return SimpleUploadedFile(
+        name,
+        b"GIF87a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+        content_type="image/gif",
+    )
+
+
 class RegistroTests(TestCase):
     """Tests para el endpoint de registro."""
 
@@ -56,6 +66,21 @@ class RegistroTests(TestCase):
         self.assertIn("refresh", resp.data["tokens"])
         self.assertTrue(Propietario.objects.filter(email="luis@test.com").exists())
         self.assertTrue(Credencial.objects.filter(email="luis@test.com").exists())
+
+    def test_registro_con_foto_guarda_imagen(self):
+        data = {
+            "nombre": "Foto",
+            "apellidos": "User",
+            "email": "foto@test.com",
+            "password": "segura1234",
+            "foto": _fake_image(),
+        }
+        resp = self.client.post(self.url, data, format="multipart")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+        propietario = Propietario.objects.get(email="foto@test.com")
+        self.assertTrue(bool(propietario.foto))
+        self.assertIn("propietarios/fotos/", propietario.foto.name)
 
     def test_registro_email_duplicado(self):
         Propietario.objects.create(nombre="Ana", apellidos="López", email="ana@test.com")
@@ -341,6 +366,58 @@ class LogoutTests(TestCase):
     def test_logout_sin_refresh_falla(self):
         resp = self.client.post("/api/v1/auth/logout/", {}, format="json")
         self.assertEqual(resp.status_code, 400)
+
+
+class EliminarCuentaTests(TestCase):
+    """Tests para el endpoint de eliminación de cuenta autenticada."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.prop, self.token = _crear_usuario("DeleteUser", "delete@test.com")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.token}")
+
+    def test_eliminar_cuenta_requiere_auth(self):
+        self.client.credentials()
+        resp = self.client.delete("/api/v1/auth/eliminar-cuenta/")
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_eliminar_cuenta_requiere_password_actual(self):
+        resp = self.client.delete("/api/v1/auth/eliminar-cuenta/", {}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password_actual", resp.data)
+
+    def test_eliminar_cuenta_con_password_incorrecta_falla(self):
+        resp = self.client.delete(
+            "/api/v1/auth/eliminar-cuenta/",
+            {"password_actual": "incorrecta"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password_actual", resp.data)
+
+    def test_eliminar_cuenta_propietario_borra_usuario_y_credencial(self):
+        resp = self.client.delete(
+            "/api/v1/auth/eliminar-cuenta/",
+            {"password_actual": "segura1234"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Propietario.objects.filter(pk=self.prop.pk).exists())
+        self.assertFalse(Credencial.objects.filter(email="delete@test.com").exists())
+
+    def test_eliminar_cuenta_admin_borra_usuario_y_credencial(self):
+        admin, token_admin = _crear_usuario("AdminDelete", "admindel@test.com", rol="admin")
+        client_admin = APIClient()
+        client_admin.credentials(HTTP_AUTHORIZATION=f"Bearer {token_admin}")
+
+        resp = client_admin.delete(
+            "/api/v1/auth/eliminar-cuenta/",
+            {"password_actual": "segura1234"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Administrador.objects.filter(pk=admin.pk).exists())
+        self.assertFalse(CredencialAdmin.objects.filter(email="admindel@test.com").exists())
 
 
 class MePatchTests(TestCase):

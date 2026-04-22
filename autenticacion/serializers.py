@@ -26,6 +26,7 @@ class RegistroAdminSerializer(serializers.Serializer):
     email = serializers.EmailField()
     telefono = serializers.CharField(max_length=20, required=False, default="")
     folio_ine = serializers.CharField(max_length=20, required=False, default="")
+    foto = serializers.ImageField(required=False, allow_null=True)
     fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
     password = serializers.CharField(write_only=True, min_length=8)
 
@@ -69,6 +70,7 @@ class RegistroSerializer(serializers.Serializer):
     email = serializers.EmailField()
     telefono = serializers.CharField(max_length=20, required=False, default="")
     folio_ine = serializers.CharField(max_length=20, required=False, default="")
+    foto = serializers.ImageField(required=False, allow_null=True)
     fecha_nacimiento = serializers.DateField(required=False, allow_null=True)
     password = serializers.CharField(write_only=True, min_length=8)
 
