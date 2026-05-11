@@ -56,6 +56,14 @@ class PropietarioSerializer(serializers.ModelSerializer):
         read_only_fields = ("created_at", "updated_at")
 
 
+class PropietarioSerializerAdmin(serializers.ModelSerializer):
+    """Vista de propietario para admins: excluye datos bancarios y fiscales."""
+    class Meta:
+        model = Propietario
+        exclude = ("banco", "clabe_interbancaria")
+        read_only_fields = ("created_at", "updated_at")
+
+
 class PropietarioListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Propietario

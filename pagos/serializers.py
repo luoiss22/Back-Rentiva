@@ -128,6 +128,11 @@ class PagoSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("created_at", "updated_at")
 
+    def _is_admin_request(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        return isinstance(user, Administrador)
+
     def get_datos_fiscales_faltantes(self, obj):
         return _calcular_datos_fiscales_faltantes(obj)
 
@@ -142,14 +147,18 @@ class PagoSerializer(serializers.ModelSerializer):
             return f"{obj.contrato.propiedad.propietario.nombre} {obj.contrato.propiedad.propietario.apellidos}".strip()
         except AttributeError:
             return "Desconocido"
-            
+
     def get_propietario_banco(self, obj):
+        if self._is_admin_request():
+            return None
         try:
             return getattr(obj.contrato.propiedad.propietario, "banco", "")
         except AttributeError:
             return ""
 
     def get_propietario_clabe(self, obj):
+        if self._is_admin_request():
+            return None
         try:
             return getattr(obj.contrato.propiedad.propietario, "clabe_interbancaria", "")
         except AttributeError:
@@ -189,6 +198,11 @@ class PagoListSerializer(serializers.ModelSerializer):
             "ficha", "factura", "datos_fiscales_faltantes"
         )
 
+    def _is_admin_request(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        return isinstance(user, Administrador)
+
     def get_inquilino_nombre(self, obj):
         try:
             return f"{obj.contrato.arrendatario.nombre} {obj.contrato.arrendatario.apellidos}".strip()
@@ -200,14 +214,18 @@ class PagoListSerializer(serializers.ModelSerializer):
             return f"{obj.contrato.propiedad.propietario.nombre} {obj.contrato.propiedad.propietario.apellidos}".strip()
         except AttributeError:
             return "Desconocido"
-            
+
     def get_propietario_banco(self, obj):
+        if self._is_admin_request():
+            return None
         try:
             return getattr(obj.contrato.propiedad.propietario, "banco", "")
         except AttributeError:
             return ""
 
     def get_propietario_clabe(self, obj):
+        if self._is_admin_request():
+            return None
         try:
             return getattr(obj.contrato.propiedad.propietario, "clabe_interbancaria", "")
         except AttributeError:

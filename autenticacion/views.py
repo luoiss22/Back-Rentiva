@@ -14,6 +14,7 @@ from .serializers import (
     AdministradorListSerializer,
     RegistroAdminSerializer,
     PropietarioSerializer,
+    PropietarioSerializerAdmin,
     PropietarioListSerializer,
     RegistroSerializer,
     LoginSerializer,
@@ -231,6 +232,8 @@ class PropietarioViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return PropietarioListSerializer
+        if isinstance(self.request.user, Administrador):
+            return PropietarioSerializerAdmin
         return PropietarioSerializer
 
     def get_owner_id(self, obj):

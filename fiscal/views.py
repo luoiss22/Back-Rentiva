@@ -9,9 +9,9 @@ from .serializers import DatosFiscalesSerializer, DatosFiscalesListSerializer
 
 class DatosFiscalesViewSet(viewsets.ModelViewSet):
     """
-    Admin: ve todos los datos fiscales.
-    Propietario: solo ve los suyos (tipo_entidad=propietario, entidad_id=user.pk)
+    Propietario: ve los suyos (tipo_entidad=propietario, entidad_id=user.pk)
     y los de sus arrendatarios.
+    Admin: NO tiene acceso a datos fiscales de los usuarios.
     """
     permission_classes = [IsOwnerOrAdmin]
     filterset_fields = ("tipo_entidad", "entidad_id")
@@ -31,14 +31,13 @@ class DatosFiscalesViewSet(viewsets.ModelViewSet):
             return None
 
     def get_queryset(self):
-        qs = DatosFiscales.objects.all()
         user = self.request.user
         if isinstance(user, Administrador):
-            return qs
+            return DatosFiscales.objects.none()
         from django.db.models import Q
         arrendatario_ids = Arrendatario.objects.filter(propietario=user).values_list("id", flat=True)
 
-        return qs.filter(
+        return DatosFiscales.objects.filter(
             Q(tipo_entidad="propietario", entidad_id=user.pk)
             | Q(tipo_entidad="arrendatario", entidad_id__in=arrendatario_ids)
         )
